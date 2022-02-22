@@ -1,0 +1,12 @@
+[package]
+name = "common"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+solana-program = "1.9.8"
+borsh = "0.9.0"
+borsh-derive = "0.9.0"
+anyhow = { version = "1.0.45", default-features = false }

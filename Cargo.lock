@@ -1697,6 +1697,8 @@ dependencies = [
 name = "program"
 version = "0.1.0"
 dependencies = [
+ "borsh",
+ "borsh-derive",
  "common",
  "solana-program",
 ]

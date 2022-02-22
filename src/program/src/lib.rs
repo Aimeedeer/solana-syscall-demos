@@ -1,3 +1,5 @@
+use borsh::de::BorshDeserialize;
+use common::CustomInstruction;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
@@ -23,11 +25,19 @@ fn process_instruction(
     let account_info_iter = &mut accounts.iter();
 
     let payer_account = next_account_info(account_info_iter)?;
+
     let system_program_account = next_account_info(account_info_iter)?;
 
     let clock_account = next_account_info(account_info_iter)?;
     let epoch_schedule_account = next_account_info(account_info_iter)?;
+
+    let instructions_account = next_account_info(account_info_iter)?;
     let rent_account = next_account_info(account_info_iter)?;
+
+    let slot_hashes_account = next_account_info(account_info_iter)?;
+    let slot_history_account = next_account_info(account_info_iter)?;
+
+    let stake_history_account = next_account_info(account_info_iter)?;
 
     {
         use solana_program::sysvar::clock;
@@ -59,6 +69,27 @@ fn process_instruction(
     }
 
     {
+        use solana_program::sysvar::instructions;
+
+        assert!(instructions::check_id(instructions_account.key));
+        assert_eq!(*instructions_account.key, instructions::ID);
+
+        let current_index = instructions::load_current_index_checked(instructions_account)?;
+        let instructions_from_account =
+            instructions::load_instruction_at_checked(current_index.into(), instructions_account)?;
+
+        assert_eq!(instructions_from_account.data, instruction_data);
+
+        let mut instruction_data = instruction_data;
+        let deserialized_instruction_data = CustomInstruction::deserialize(&mut instruction_data)?;
+
+        msg!(
+            "deserialized_instruction_data: {:#?}",
+            deserialized_instruction_data
+        );
+    }
+
+    {
         use solana_program::sysvar::rent;
 
         assert!(rent::check_id(rent_account.key));
@@ -70,6 +101,33 @@ fn process_instruction(
         assert_eq!(rent_from_account, rent_from_sysvar);
 
         msg!("rent: {:#?}", rent_from_account);
+    }
+
+    {
+        use solana_program::sysvar::slot_hashes;
+
+        assert!(slot_hashes::check_id(slot_hashes_account.key));
+        assert_eq!(*slot_hashes_account.key, slot_hashes::ID);
+
+        msg!("slot_hashes: {:#?}", slot_hashes_account);
+    }
+
+    {
+        use solana_program::sysvar::slot_history;
+
+        assert!(slot_history::check_id(slot_history_account.key));
+        assert_eq!(*slot_history_account.key, slot_history::ID);
+
+        msg!("slot_history: {:#?}", slot_history_account);
+    }
+
+    {
+        use solana_program::sysvar::stake_history;
+
+        assert!(stake_history::check_id(stake_history_account.key));
+        assert_eq!(*stake_history_account.key, stake_history::ID);
+
+        msg!("stake_history: {:#?}", stake_history_account);
     }
 
     Ok(())

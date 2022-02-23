@@ -16,19 +16,69 @@ fn main() -> Result<()> {
     let program_keypair = get_program_keypair(&client)?;
     println!("program id: {:#?}", program_keypair.pubkey());
 
-    let instr =
-        CustomInstruction::build_instruction(&config.keypair.pubkey(), &program_keypair.pubkey())?;
+    {
+        // sysvar printing via program
+        // use `solana logs` to see printing
+        let instr = CustomInstruction::build_instruction(
+            &config.keypair.pubkey(),
+            &program_keypair.pubkey(),
+        )?;
 
-    let blockhash = client.get_latest_blockhash()?;
-    let tx = Transaction::new_signed_with_payer(
-        &[instr],
-        Some(&config.keypair.pubkey()),
-        &[&config.keypair],
-        blockhash,
-    );
+        let blockhash = client.get_latest_blockhash()?;
+        let tx = Transaction::new_signed_with_payer(
+            &[instr],
+            Some(&config.keypair.pubkey()),
+            &[&config.keypair],
+            blockhash,
+        );
 
-    let sig = client.send_and_confirm_transaction(&tx)?;
-    println!("sig: {}", sig);
+        let sig = client.send_and_confirm_transaction(&tx)?;
+        println!("sig_program_printing: {}", sig);
+    }
+
+    {
+        // sysvar printing via client
+        println!("--------------------------------------- start printing sysvar ---------------------------------------");
+
+        use solana_sdk::sysvar::Sysvar;
+        use solana_sdk::sysvar::{
+            clock, epoch_schedule, instructions, rent, slot_hashes, slot_history, stake_history,
+        };
+
+        let sysvar_program_id = clock::ID;
+        println!("clock::ID: {}", sysvar_program_id);
+        println!("clock::check_id: {}", clock::check_id(&sysvar_program_id));
+        println!("clock::Clock::size_of: {}", clock::Clock::size_of());
+
+        let sysvar_program_id = epoch_schedule::ID;
+        println!("epoch_schedule::ID: {}", sysvar_program_id);
+        println!("epoch_schedule::check_id: {}", epoch_schedule::check_id(&sysvar_program_id));
+        println!("epoch_schedule::EpochSchedule::size_of: {}", epoch_schedule::EpochSchedule::size_of());
+
+        let sysvar_program_id = instructions::ID;
+        println!("instructions::ID: {}", sysvar_program_id);
+        println!("instructions::check_id: {}", instructions::check_id(&sysvar_program_id));
+
+        let sysvar_program_id = rent::ID;
+        println!("rent::ID: {}", sysvar_program_id);
+        println!("rent::check_id: {}", rent::check_id(&sysvar_program_id));
+        println!("rent::Rent::size_of: {}", rent::Rent::size_of());
+
+        let sysvar_program_id = slot_hashes::ID;
+        println!("slot_hashes::ID: {}", sysvar_program_id);
+        println!("slot_hashes::check_id: {}", slot_hashes::check_id(&sysvar_program_id));
+        println!("slot_hashes::SlotHashes::size_of: {}", slot_hashes::SlotHashes::size_of());
+
+        let sysvar_program_id = slot_history::ID;
+        println!("slot_history::ID: {}", sysvar_program_id);
+        println!("slot_history::check_id: {}", slot_history::check_id(&sysvar_program_id));
+        println!("slot_history::SlotHistory::size_of: {}", slot_history::SlotHistory::size_of());
+
+        let sysvar_program_id = stake_history::ID;
+        println!("stake_history::ID: {}", sysvar_program_id);
+        println!("stake_history::check_id: {}", stake_history::check_id(&sysvar_program_id));
+        println!("stake_history::StakeHistory::size_of: {}", stake_history::StakeHistory::size_of());
+    }
 
     Ok(())
 }

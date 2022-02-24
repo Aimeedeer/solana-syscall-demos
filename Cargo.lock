@@ -370,6 +370,7 @@ name = "client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bincode",
  "common",
  "env_logger",
  "log",
@@ -1697,6 +1698,7 @@ dependencies = [
 name = "program"
 version = "0.1.0"
 dependencies = [
+ "bincode",
  "borsh",
  "borsh-derive",
  "common",

@@ -1,5 +1,7 @@
+use bincode;
 use borsh::de::BorshDeserialize;
 use common::CustomInstruction;
+use solana_program::program_error::ProgramError;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
@@ -20,7 +22,7 @@ fn process_instruction(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    msg!("process instruction for printing sysvar");
+    msg!("sysvar program printing");
 
     let account_info_iter = &mut accounts.iter();
 
@@ -39,14 +41,17 @@ fn process_instruction(
 
     let stake_history_account = next_account_info(account_info_iter)?;
 
+    // `Program consumed 200000 of 200000 compute units`
+    // comment some blocks of code to run it correctly
+
     {
-        use solana_program::sysvar::clock;
+        use solana_program::sysvar::clock::{self, Clock};
 
         assert!(clock::check_id(clock_account.key));
         assert_eq!(*clock_account.key, clock::ID);
 
-        let clock_from_account = clock::Clock::from_account_info(clock_account)?;
-        let clock_from_sysvar = clock::Clock::get()?;
+        let clock_from_account = Clock::from_account_info(clock_account)?;
+        let clock_from_sysvar = Clock::get()?;
 
         assert_eq!(clock_from_account, clock_from_sysvar);
 
@@ -54,14 +59,13 @@ fn process_instruction(
     }
 
     {
-        use solana_program::sysvar::epoch_schedule;
+        use solana_program::sysvar::epoch_schedule::{self, EpochSchedule};
 
         assert!(epoch_schedule::check_id(epoch_schedule_account.key));
         assert_eq!(*epoch_schedule_account.key, epoch_schedule::ID);
 
-        let epoch_schedule_from_account =
-            epoch_schedule::EpochSchedule::from_account_info(epoch_schedule_account)?;
-        let epoch_schedule_from_sysvar = epoch_schedule::EpochSchedule::get()?;
+        let epoch_schedule_from_account = EpochSchedule::from_account_info(epoch_schedule_account)?;
+        let epoch_schedule_from_sysvar = EpochSchedule::get()?;
 
         assert_eq!(epoch_schedule_from_account, epoch_schedule_from_sysvar);
 
@@ -90,13 +94,13 @@ fn process_instruction(
     }
 
     {
-        use solana_program::sysvar::rent;
+        use solana_program::sysvar::rent::{self, Rent};
 
         assert!(rent::check_id(rent_account.key));
         assert_eq!(*rent_account.key, rent::ID);
 
-        let rent_from_account = rent::Rent::from_account_info(rent_account)?;
-        let rent_from_sysvar = rent::Rent::get()?;
+        let rent_from_account = Rent::from_account_info(rent_account)?;
+        let rent_from_sysvar = Rent::get()?;
 
         assert_eq!(rent_from_account, rent_from_sysvar);
 

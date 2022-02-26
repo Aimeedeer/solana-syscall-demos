@@ -374,7 +374,6 @@ dependencies = [
  "common",
  "env_logger",
  "log",
- "program",
  "solana-cli-config",
  "solana-client",
  "solana-sdk",
@@ -1698,7 +1697,6 @@ dependencies = [
 name = "program"
 version = "0.1.0"
 dependencies = [
- "bincode",
  "borsh",
  "borsh-derive",
  "common",

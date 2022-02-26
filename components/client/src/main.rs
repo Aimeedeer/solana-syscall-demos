@@ -10,14 +10,15 @@ use solana_sdk::{
 };
 
 fn main() -> Result<()> {
+    env_logger::init();
+
     let config = load_config()?;
     let client = connect(&config)?;
     let version = client.get_version()?;
+    info!("version: {}", version);
 
     let program_keypair = get_program_keypair(&client)?;
     println!("program id: {:#?}", program_keypair.pubkey());
-
-    env_logger::init();
 
     // sysvar printing via program
     {

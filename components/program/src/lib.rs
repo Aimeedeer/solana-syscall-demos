@@ -1,24 +1,18 @@
-use bincode;
 use borsh::de::BorshDeserialize;
 use common::CustomInstruction;
-use solana_program::program_error::ProgramError;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
+    entrypoint,
     entrypoint::ProgramResult,
     msg,
     pubkey::Pubkey,
     sysvar::Sysvar,
 };
 
-#[cfg(not(feature = "no-entrypoint"))]
-mod entrypoint {
-    use super::process_instruction;
-    use solana_program::entrypoint;
-    entrypoint!(process_instruction);
-}
+entrypoint!(process_instruction);
 
 fn process_instruction(
-    program_id: &Pubkey,
+    _program_id: &Pubkey,
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
@@ -26,9 +20,9 @@ fn process_instruction(
 
     let account_info_iter = &mut accounts.iter();
 
-    let payer_account = next_account_info(account_info_iter)?;
+    let _payer_account = next_account_info(account_info_iter)?;
 
-    let system_program_account = next_account_info(account_info_iter)?;
+    let _system_program_account = next_account_info(account_info_iter)?;
 
     let clock_account = next_account_info(account_info_iter)?;
     let epoch_schedule_account = next_account_info(account_info_iter)?;

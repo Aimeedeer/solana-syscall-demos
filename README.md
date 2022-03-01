@@ -9,7 +9,7 @@ It has three parts:
 - `program`: an on-chain program for reading and printing sysvar
 - `client`:
   - call the on-chain program to execute printing
-  - use RPC client to request sysvar and print it out
+  - use RPC client to request `sysvar` and print it out
 - `common`: a library that is shared with `program` and `client` for
   customized instructions
 
@@ -55,7 +55,7 @@ Program Id: <your_program_id>
 **Things to be aware of:**
 
 `devnet` runtime provides 200,000 compute units, while `localhost`
-gives you 1,400,000 compute units. (I didn't test it on `testnet` or
+offers 1,400,000 compute units. (I didn't test it on `testnet` or
 `mainnet-beta`.) 
 
 This program works fine with `localhost`, but it

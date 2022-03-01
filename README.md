@@ -1,10 +1,14 @@
 # Solana Sysvar Printing
 
-This program doesn't do anything useful but prints Solana's sysvar accounts.
+This program prints Solana's [`sysvar`
+accounts](https://docs.solana.com/developing/runtime-facilities/sysvars).
+It can be used for understanding how `sysvar` works both on-chain and off-chain.
+
+
 It has three parts:
-- `program`: an on chain program for reading and printing sysvar
+- `program`: an on-chain program for reading and printing sysvar
 - `client`:
-  - call the on chain program to execute printing
+  - call the on-chain program to execute printing
   - use RPC client to request sysvar and print it out
 - `common`: a library that is shared with `program` and `client` for
   customized instructions
@@ -61,7 +65,7 @@ to avoid running out of computing budget while executing on `devnet`.
 Run it and print results:
 
 ```
-$ RUST_LOG=solana_client=debug cargo run
+$ cargo run
 
 program id: <your_program_id>
 sig: <your_tx_signature>

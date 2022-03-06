@@ -8,7 +8,17 @@ use solana_program::{
 
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub enum ProgramInstruction {
+    SystemInstruction(SystemInstructionInstruction),
     Sysvar(SysvarInstruction),
+}
+
+/// # Accounts
+///
+/// - 0: payer - writable, signer
+/// - 1: system_program - executable
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+pub struct SystemInstructionInstruction {
+    rent_lamports: u64,
 }
 
 /// # Accounts

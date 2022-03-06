@@ -1,5 +1,5 @@
 use borsh::de::BorshDeserialize;
-use common::{ProgramInstruction, SysvarInstruction};
+use common::{ProgramInstruction, SystemInstructionInstruction, SysvarInstruction};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint,
@@ -21,6 +21,7 @@ fn process_instruction(
     let instr = ProgramInstruction::deserialize(&mut &instruction_data[..])?;
 
     let instr: &dyn Exec = match &instr {
+        ProgramInstruction::SystemInstruction(instr) => instr,
         ProgramInstruction::Sysvar(instr) => instr,
     };
     instr.exec(program_id, accounts)
@@ -30,6 +31,21 @@ trait Exec {
     fn exec(&self, program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult;
 }
 
+impl Exec for SystemInstructionInstruction {
+    fn exec(&self, _program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        msg!("--------------------------------------- system_instruction ---------------------------------------");
+
+        let account_info_iter = &mut accounts.iter();
+
+        let _payer_account = next_account_info(account_info_iter)?;
+        let _system_program_account = next_account_info(account_info_iter)?;
+
+        // todo
+        
+        Ok(())
+    }
+}
+
 impl Exec for SysvarInstruction {
     fn exec(&self, _program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         msg!("--------------------------------------- sysvar program printing ---------------------------------------");
@@ -37,7 +53,6 @@ impl Exec for SysvarInstruction {
         let account_info_iter = &mut accounts.iter();
 
         let _payer_account = next_account_info(account_info_iter)?;
-
         let _system_program_account = next_account_info(account_info_iter)?;
 
         let clock_account = next_account_info(account_info_iter)?;
@@ -96,9 +111,7 @@ impl Exec for SysvarInstruction {
             )?;
 
             let instr_from_account = instructions_from_account.data;
-
             let instr_from_account = ProgramInstruction::deserialize(&mut &instr_from_account[..])?;
-            //            assert_eq!(&instr_from_account, self);
 
             msg!(
                 "deserialized instruction data from account: {:#?}",

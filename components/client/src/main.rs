@@ -27,14 +27,12 @@ fn main() -> Result<()> {
 
     system_instruction_examples::create_account_via_program(&client, &program_id, &config.keypair)?;
     system_instruction_examples::create_account_via_rpc(&client, &config.keypair)?;
-    
+
     sysvar_printing::sysvar_printing_via_program(&client, &program_id, &config.keypair)?;
     sysvar_printing::sysvar_printing_via_rpc(&client)?;
 
     Ok(())
 }
-
-    
 
 static DEPLOY_PATH: &str = "target/deploy";
 static PROGRAM_KEYPAIR_PATH: &str = "program-keypair.json";

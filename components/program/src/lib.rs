@@ -1,15 +1,18 @@
 use borsh::de::BorshDeserialize;
 use common::{
+    system_instruction_instruction::{CreateAccount, SystemInstructionInstruction},
+    sysvar_instruction::SysvarInstruction,
     ProgramInstruction,
-    system_instruction_instruction::SystemInstructionInstruction,
-    sysvar_instruction::SysvarInstruction
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint,
     entrypoint::ProgramResult,
     msg,
+    program::invoke,
     pubkey::Pubkey,
+    system_instruction, system_program,
+    sysvar::rent::Rent,
     sysvar::Sysvar,
 };
 
@@ -25,7 +28,9 @@ fn process_instruction(
     let instr = ProgramInstruction::deserialize(&mut &instruction_data[..])?;
 
     let instr: &dyn Exec = match &instr {
-        ProgramInstruction::SystemInstruction(instr) => instr,
+        ProgramInstruction::SystemInstruction(instr) => match &instr {
+            SystemInstructionInstruction::CreateAccount(instr) => instr,
+        },
         ProgramInstruction::Sysvar(instr) => instr,
     };
     instr.exec(program_id, accounts)
@@ -35,18 +40,38 @@ trait Exec {
     fn exec(&self, program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult;
 }
 
-impl Exec for SystemInstructionInstruction {
+impl Exec for CreateAccount {
     fn exec(&self, _program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
-        msg!("--------------------------------------- system_instruction ---------------------------------------");
+        msg!("--------------------------------------- create_account_via_program ---------------------------------------");
 
         let account_info_iter = &mut accounts.iter();
 
-        let _payer_account = next_account_info(account_info_iter)?;
-        let _system_program_account = next_account_info(account_info_iter)?;
+        let payer = next_account_info(account_info_iter)?;
+        let new_account = next_account_info(account_info_iter)?;
+        let system_account = next_account_info(account_info_iter)?;
 
-        // todo
-        
-        Ok(())
+        {
+            assert!(new_account.is_signer);
+            assert_eq!(system_account.key, &system_program::ID);
+        }
+
+        let rent = Rent::get()?;
+        let lamports = rent.minimum_balance(
+            self.space
+                .try_into()
+                .expect("failed converting `space` from u64 to usize"),
+        );
+
+        invoke(
+            &system_instruction::create_account(
+                payer.key,
+                new_account.key,
+                lamports,
+                self.space,
+                &system_program::ID,
+            ),
+            &[payer.clone(), new_account.clone(), system_account.clone()],
+        )
     }
 }
 
@@ -124,7 +149,7 @@ impl Exec for SysvarInstruction {
         }
 
         {
-            use solana_program::sysvar::rent::{self, Rent};
+            use solana_program::sysvar::rent;
 
             assert!(rent::check_id(rent_account.key));
             assert_eq!(*rent_account.key, rent::ID);

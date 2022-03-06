@@ -1,6 +1,6 @@
 # Log
 
-## Printing results
+## Sysvar printing results
 
 ### Client printing
 
@@ -80,7 +80,9 @@ data from localhost (run `solana-test-validator`):
     Program <program_id> success
 ```
 
-## On chain program error: consumed 200000 of 200000 compute units when deserializing data
+## On-chain program error when testing sysvar printing
+
+> consumed 200000 of 200000 compute units when deserializing data
 
 ```
 Program log: stake_history: AccountInfo {
@@ -100,7 +102,25 @@ Program <program_id> consumed 200000 of 200000 compute units
 Program failed to complete: exceeded maximum number of instructions allowed (200000) at instruction #1400
 ```
 
-## 2022-02-23
+
+## 2022-03-06 system_instruction::create_account
+
+`create_account` requires two signers: fee_payer and new_account.
+
+I tested `create_account` with an on-chain program and rpc_client call.
+Lacking new_account as a signer cause signature verification errors:
+
+when call `create_account_via_program`:
+```
+thread 'main' panicked at 'Transaction::sign failed with error KeypairPubkeyMismatch'
+```
+
+when call `create_account_via_rpc`:
+```
+thread 'main' panicked at 'Transaction::sign failed with error NotEnoughSigners'
+```
+
+## 2022-02-23 sysvar
 
 ### Client errors
 
@@ -110,7 +130,7 @@ Program failed to complete: exceeded maximum number of instructions allowed (200
 println!("clock: {:#?}", clock::Clock::get());
 ```
 
-## 2022-02-22
+## 2022-02-22 sysvar
 
 Program errors:
 
@@ -166,7 +186,7 @@ impl Sysvar for StakeHistory {
 }
 ```
 
-## 2022-02-19
+## 2022-02-19 sysvar
 
 Deploy error:
 

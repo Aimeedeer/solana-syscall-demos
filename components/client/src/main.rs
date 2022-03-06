@@ -1,6 +1,6 @@
 use anyhow::{anyhow, bail, Context, Result};
 use bincode;
-use common::CustomInstruction;
+use common::SysvarInstruction;
 use log::info;
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
@@ -26,7 +26,7 @@ fn main() -> Result<()> {
 
     // sysvar printing via program
     {
-        let instr = CustomInstruction::build_instruction(
+        let instr = SysvarInstruction::build_instruction(
             &config.keypair.pubkey(),
             &program_keypair.pubkey(),
         )?;

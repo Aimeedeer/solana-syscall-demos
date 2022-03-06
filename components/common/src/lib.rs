@@ -6,6 +6,11 @@ use solana_program::{
     system_program, sysvar,
 };
 
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+pub enum ProgramInstruction {
+    Sysvar(SysvarInstruction),
+}
+
 /// # Accounts
 ///
 /// - 0: payer - writable, signer
@@ -18,13 +23,14 @@ use solana_program::{
 /// - 7: slot_history - executable
 /// - 8: stake_history - executable
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
-pub struct CustomInstruction {
+pub struct SysvarInstruction {
     test_amount: u64,
 }
 
-impl CustomInstruction {
+impl SysvarInstruction {
     pub fn build_instruction(payer: &Pubkey, program_id: &Pubkey) -> Result<Instruction> {
-        let instr = CustomInstruction { test_amount: 1_000 };
+        let instr = SysvarInstruction { test_amount: 1_000 };
+        let instr = ProgramInstruction::Sysvar(instr);
 
         let accounts = vec![
             AccountMeta::new(*payer, true),

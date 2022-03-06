@@ -6,6 +6,7 @@ use solana_sdk::{
     signature::{read_keypair_file, Keypair, Signer},
 };
 
+mod system_instruction_examples;
 mod sysvar_printing;
 
 fn main() -> Result<()> {
@@ -21,9 +22,13 @@ fn main() -> Result<()> {
     info!("version: {}", version);
 
     let program_keypair = get_program_keypair(&client)?;
-    println!("program id: {:#?}", program_keypair.pubkey());
+    let program_id = program_keypair.pubkey();
+    println!("program id: {:#?}", program_id);
 
-    sysvar_printing::sysvar_printing_via_program(&client, &program_keypair.pubkey(), &config.keypair)?;
+    system_instruction_examples::create_account_via_program(&client, &program_id, &config.keypair)?;
+    system_instruction_examples::create_account_via_rpc(&client, &config.keypair)?;
+    
+    sysvar_printing::sysvar_printing_via_program(&client, &program_id, &config.keypair)?;
     sysvar_printing::sysvar_printing_via_rpc(&client)?;
 
     Ok(())

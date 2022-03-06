@@ -1,5 +1,5 @@
 use anyhow::Result;
-use common::SysvarInstruction;
+use common::sysvar_instruction::SysvarInstruction;
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     pubkey::Pubkey,

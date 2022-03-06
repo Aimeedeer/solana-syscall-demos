@@ -1,5 +1,9 @@
 use borsh::de::BorshDeserialize;
-use common::{ProgramInstruction, SystemInstructionInstruction, SysvarInstruction};
+use common::{
+    ProgramInstruction,
+    system_instruction_instruction::SystemInstructionInstruction,
+    sysvar_instruction::SysvarInstruction
+};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint,

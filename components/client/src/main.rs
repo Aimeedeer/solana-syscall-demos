@@ -6,8 +6,8 @@ use solana_sdk::{
     signature::{read_keypair_file, Keypair, Signer},
 };
 
-mod system_instruction_examples;
-mod sysvar_printing;
+mod system_test;
+mod sysvar_test;
 
 fn main() -> Result<()> {
     env_logger::Builder::new()
@@ -25,11 +25,13 @@ fn main() -> Result<()> {
     let program_id = program_keypair.pubkey();
     println!("program id: {:#?}", program_id);
 
-    system_instruction_examples::create_account_via_program(&client, &program_id, &config.keypair)?;
-    system_instruction_examples::create_account_via_rpc(&client, &config.keypair)?;
+    // Solana's system_instruction
+    system_test::create_account_via_program(&client, &program_id, &config.keypair)?;
+    system_test::create_account_via_rpc(&client, &config.keypair)?;
 
-    sysvar_printing::sysvar_printing_via_program(&client, &program_id, &config.keypair)?;
-    sysvar_printing::sysvar_printing_via_rpc(&client)?;
+    // Solana's sysvar
+    sysvar_test::sysvar_printing_via_program(&client, &program_id, &config.keypair)?;
+    sysvar_test::sysvar_printing_via_rpc(&client)?;
 
     Ok(())
 }

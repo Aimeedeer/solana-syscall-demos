@@ -8,7 +8,7 @@ use solana_program::{
 };
 
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
-pub enum SystemInstructionInstruction {
+pub enum SystemTestInstruction {
     CreateAccount(CreateAccount),
 }
 
@@ -30,9 +30,7 @@ impl CreateAccount {
         space: u64,
     ) -> Result<Instruction> {
         let instr = CreateAccount { space };
-        let instr = ProgramInstruction::SystemInstruction(
-            SystemInstructionInstruction::CreateAccount(instr),
-        );
+        let instr = ProgramInstruction::SystemTest(SystemTestInstruction::CreateAccount(instr));
 
         let accounts = vec![
             AccountMeta::new(*payer, true),

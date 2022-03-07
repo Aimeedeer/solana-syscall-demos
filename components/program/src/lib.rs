@@ -1,7 +1,7 @@
 use borsh::de::BorshDeserialize;
 use common::{
-    system_instruction_instruction::{CreateAccount, SystemInstructionInstruction},
-    sysvar_instruction::SysvarInstruction,
+    system_test::{CreateAccount, SystemTestInstruction},
+    sysvar_test::SysvarTestInstruction,
     ProgramInstruction,
 };
 use solana_program::{
@@ -28,10 +28,10 @@ fn process_instruction(
     let instr = ProgramInstruction::deserialize(&mut &instruction_data[..])?;
 
     let instr: &dyn Exec = match &instr {
-        ProgramInstruction::SystemInstruction(instr) => match &instr {
-            SystemInstructionInstruction::CreateAccount(instr) => instr,
+        ProgramInstruction::SystemTest(instr) => match &instr {
+            SystemTestInstruction::CreateAccount(instr) => instr,
         },
-        ProgramInstruction::Sysvar(instr) => instr,
+        ProgramInstruction::SysvarTest(instr) => instr,
     };
     instr.exec(program_id, accounts)
 }
@@ -75,7 +75,7 @@ impl Exec for CreateAccount {
     }
 }
 
-impl Exec for SysvarInstruction {
+impl Exec for SysvarTestInstruction {
     fn exec(&self, _program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         msg!("--------------------------------------- sysvar program printing ---------------------------------------");
 

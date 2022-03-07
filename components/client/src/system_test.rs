@@ -1,5 +1,5 @@
 use anyhow::Result;
-use common::system_instruction_instruction::CreateAccount;
+use common::system_test::CreateAccount;
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     pubkey::Pubkey, signature::Signer, signer::keypair::Keypair, system_instruction,

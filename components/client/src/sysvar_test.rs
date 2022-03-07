@@ -1,5 +1,5 @@
 use anyhow::Result;
-use common::sysvar_instruction::SysvarInstruction;
+use common::sysvar_test::SysvarTestInstruction;
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     pubkey::Pubkey,
@@ -12,7 +12,7 @@ pub fn sysvar_printing_via_program(
     program_id: &Pubkey,
     payer: &Keypair,
 ) -> Result<()> {
-    let instr = SysvarInstruction::build_instruction(&payer.pubkey(), program_id)?;
+    let instr = SysvarTestInstruction::build_instruction(&payer.pubkey(), program_id)?;
 
     let blockhash = client.get_latest_blockhash()?;
     let tx =

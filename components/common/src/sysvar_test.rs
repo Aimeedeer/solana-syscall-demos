@@ -19,14 +19,14 @@ use solana_program::{
 /// - 7: slot_history - executable
 /// - 8: stake_history - executable
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
-pub struct SysvarInstruction {
+pub struct SysvarTestInstruction {
     pub test_amount: u64,
 }
 
-impl SysvarInstruction {
+impl SysvarTestInstruction {
     pub fn build_instruction(payer: &Pubkey, program_id: &Pubkey) -> Result<Instruction> {
-        let instr = SysvarInstruction { test_amount: 1_000 };
-        let instr = ProgramInstruction::Sysvar(instr);
+        let instr = SysvarTestInstruction { test_amount: 1_000 };
+        let instr = ProgramInstruction::SysvarTest(instr);
 
         let accounts = vec![
             AccountMeta::new(*payer, true),

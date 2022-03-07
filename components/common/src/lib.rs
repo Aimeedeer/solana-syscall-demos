@@ -1,12 +1,12 @@
 use borsh::{BorshDeserialize, BorshSerialize};
-use system_instruction_instruction::SystemInstructionInstruction;
-use sysvar_instruction::SysvarInstruction;
+use system_test::SystemTestInstruction;
+use sysvar_test::SysvarTestInstruction;
 
-pub mod system_instruction_instruction;
-pub mod sysvar_instruction;
+pub mod system_test;
+pub mod sysvar_test;
 
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub enum ProgramInstruction {
-    SystemInstruction(SystemInstructionInstruction),
-    Sysvar(SysvarInstruction),
+    SystemTest(SystemTestInstruction),
+    SysvarTest(SysvarTestInstruction),
 }

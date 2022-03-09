@@ -3,6 +3,7 @@ use log::info;
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     commitment_config::CommitmentConfig,
+    pubkey::Pubkey,
     signature::{read_keypair_file, Keypair, Signer},
 };
 
@@ -25,13 +26,27 @@ fn main() -> Result<()> {
     let program_id = program_keypair.pubkey();
     println!("program id: {:#?}", program_id);
 
-    // Solana's system_instruction
-    system_test::create_account_via_program(&client, &program_id, &config.keypair)?;
-    system_test::create_account_via_rpc(&client, &config.keypair)?;
+    {
+        // Solana's system_instruction
 
-    // Solana's sysvar
-    sysvar_test::sysvar_printing_via_program(&client, &program_id, &config.keypair)?;
-    sysvar_test::sysvar_printing_via_rpc(&client)?;
+        let payer = &config.keypair;
+        system_test::create_account_via_program(&client, &program_id, &payer)?;
+        system_test::create_account_via_rpc(&client, &payer)?;
+
+        let from = payer;
+        let to = Pubkey::new_unique();
+        println!("transfer to account {:#?}", to);
+        system_test::transfer_via_program(&client, &program_id, &from, &to)?;
+        system_test::transfer_via_rpc(&client, &from, &to)?;
+        let to_account = client.get_account(&to)?;
+        println!("account update: {:#?}", to_account);
+    }
+
+    {
+        // Solana's sysvar
+        sysvar_test::sysvar_printing_via_program(&client, &program_id, &config.keypair)?;
+        sysvar_test::sysvar_printing_via_rpc(&client)?;
+    }
 
     Ok(())
 }

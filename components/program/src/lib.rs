@@ -1,6 +1,6 @@
 use borsh::de::BorshDeserialize;
 use common::{
-    system_test::{CreateAccount, SystemTestInstruction},
+    system_test::{CreateAccount, SystemTestInstruction, TransferLamports},
     sysvar_test::SysvarTestInstruction,
     ProgramInstruction,
 };
@@ -30,6 +30,7 @@ fn process_instruction(
     let instr: &dyn Exec = match &instr {
         ProgramInstruction::SystemTest(instr) => match &instr {
             SystemTestInstruction::CreateAccount(instr) => instr,
+            SystemTestInstruction::TransferLamports(instr) => instr,
         },
         ProgramInstruction::SysvarTest(instr) => instr,
     };
@@ -71,6 +72,25 @@ impl Exec for CreateAccount {
                 &system_program::ID,
             ),
             &[payer.clone(), new_account.clone(), system_account.clone()],
+        )
+    }
+}
+
+impl Exec for TransferLamports {
+    fn exec(&self, _program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        msg!("--------------------------------------- transfer_via_program ---------------------------------------");
+
+        let account_info_iter = &mut accounts.iter();
+
+        let from = next_account_info(account_info_iter)?;
+        let to = next_account_info(account_info_iter)?;
+        let system_account = next_account_info(account_info_iter)?;
+
+        assert_eq!(system_account.key, &system_program::ID);
+
+        invoke(
+            &system_instruction::transfer(from.key, to.key, self.amount),
+            &[from.clone(), to.clone()],
         )
     }
 }

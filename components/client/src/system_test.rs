@@ -1,5 +1,5 @@
 use anyhow::Result;
-use common::system_test::CreateAccount;
+use common::system_test::{CreateAccount, TransferLamports};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     pubkey::Pubkey, signature::Signer, signer::keypair::Keypair, system_instruction,
@@ -60,6 +60,37 @@ pub fn create_account_via_rpc(client: &RpcClient, payer: &Keypair) -> Result<()>
 
     let sig = client.send_and_confirm_transaction(&tx)?;
     println!("create_account_via_rpc tx signature: {:#?}", sig);
+
+    Ok(())
+}
+
+pub fn transfer_via_program(
+    client: &RpcClient,
+    program_id: &Pubkey,
+    from: &Keypair,
+    to: &Pubkey,
+) -> Result<()> {
+    let instr = TransferLamports::build_instruction(program_id, &from.pubkey(), &to, 1_000_000)?;
+
+    let blockhash = client.get_latest_blockhash()?;
+    let tx = Transaction::new_signed_with_payer(&[instr], Some(&from.pubkey()), &[from], blockhash);
+
+    let sig = client.send_and_confirm_transaction(&tx)?;
+    println!("transfer_via_program tx signature: {:#?}", sig);
+
+    Ok(())
+}
+
+pub fn transfer_via_rpc(client: &RpcClient, from: &Keypair, to: &Pubkey) -> Result<()> {
+    println!("--------------------------------------- transfer_via_rpc ---------------------------------------");
+
+    let instr = system_instruction::transfer(&from.pubkey(), to, 1_000_000);
+
+    let blockhash = client.get_latest_blockhash()?;
+    let tx = Transaction::new_signed_with_payer(&[instr], Some(&from.pubkey()), &[from], blockhash);
+
+    let sig = client.send_and_confirm_transaction(&tx)?;
+    println!("transfer_via_rpc tx signature: {:#?}", sig);
 
     Ok(())
 }

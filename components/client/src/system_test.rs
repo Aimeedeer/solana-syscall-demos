@@ -1,5 +1,5 @@
 use anyhow::Result;
-use common::system_test::{CreateAccount, TransferLamports};
+use common::system_test::{Allocate, CreateAccount, TransferLamports};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     pubkey::Pubkey, signature::Signer, signer::keypair::Keypair, system_instruction,
@@ -10,8 +10,8 @@ pub fn create_account_via_program(
     client: &RpcClient,
     program_id: &Pubkey,
     payer: &Keypair,
+    new_account: &Keypair,
 ) -> Result<()> {
-    let new_account = Keypair::new();
     let space = 0;
 
     let instr = CreateAccount::build_instruction(
@@ -25,7 +25,7 @@ pub fn create_account_via_program(
     let tx = Transaction::new_signed_with_payer(
         &[instr],
         Some(&payer.pubkey()),
-        &[payer, &new_account],
+        &[payer, new_account],
         blockhash,
     );
 
@@ -35,10 +35,13 @@ pub fn create_account_via_program(
     Ok(())
 }
 
-pub fn create_account_via_rpc(client: &RpcClient, payer: &Keypair) -> Result<()> {
+pub fn create_account_via_rpc(
+    client: &RpcClient,
+    payer: &Keypair,
+    new_account: &Keypair,
+) -> Result<()> {
     println!("--------------------------------------- create_account_via_rpc ---------------------------------------");
 
-    let new_account = Keypair::new();
     let space = 0;
 
     let rent = client.get_minimum_balance_for_rent_exemption(space.try_into()?)?;
@@ -54,7 +57,7 @@ pub fn create_account_via_rpc(client: &RpcClient, payer: &Keypair) -> Result<()>
     let tx = Transaction::new_signed_with_payer(
         &[instr],
         Some(&payer.pubkey()),
-        &[payer, &new_account],
+        &[payer, new_account],
         blockhash,
     );
 
@@ -92,5 +95,53 @@ pub fn transfer_via_rpc(client: &RpcClient, from: &Keypair, to: &Pubkey) -> Resu
     let sig = client.send_and_confirm_transaction(&tx)?;
     println!("transfer_via_rpc tx signature: {:#?}", sig);
 
+    Ok(())
+}
+
+pub fn allocate_via_program(
+    client: &RpcClient,
+    program_id: &Pubkey,
+    payer: &Keypair,
+    new_account: &Keypair,
+) -> Result<()> {
+    let allocate_new_space = 1024;
+
+    let instr = Allocate::build_instruction(
+        program_id,
+        &payer.pubkey(),
+        &new_account.pubkey(),
+        allocate_new_space,
+    )?;
+
+    let blockhash = client.get_latest_blockhash()?;
+    let tx = Transaction::new_signed_with_payer(
+        &[instr],
+        Some(&payer.pubkey()),
+        &[payer, new_account],
+        blockhash,
+    );
+
+    let sig = client.send_and_confirm_transaction(&tx)?;
+    println!("allocate_via_program tx signature: {:#?}", sig);
+
+    Ok(())
+}
+
+pub fn allocate_via_rpc(client: &RpcClient, payer: &Keypair, new_account: &Keypair) -> Result<()> {
+    println!("--------------------------------------- allocate_via_rpc ---------------------------------------");
+
+    let allocate_new_space = 1024;
+    let instr = system_instruction::allocate(&new_account.pubkey(), allocate_new_space);
+
+    let blockhash = client.get_latest_blockhash()?;
+    let tx = Transaction::new_signed_with_payer(
+        &[instr],
+        Some(&payer.pubkey()),
+        &[payer, new_account],
+        blockhash,
+    );
+
+    let sig = client.send_and_confirm_transaction(&tx)?;
+    println!("allocate_via_rpc tx signature: {:#?}", sig);
     Ok(())
 }

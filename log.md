@@ -103,6 +103,28 @@ Program failed to complete: exceeded maximum number of instructions allowed (200
 ```
 
 
+## 2022-03-10 system_instruction::allocate restrictions
+
+The account that needs to be allocated has to be `signer` along with the tx fee payer.
+
+An account can be allocated when its data.len() is 0.
+
+An account whose data.len() > 0 can't be tx fee payer.
+
+### some of my tests and errors
+
+I tried to allocate the same account for the second time and it caused an error:
+
+```
+Transaction leaves an account with data with a lower balance than rent-exempt minimum
+```
+
+I transferred some lamports to the account and then tried allocating:
+
+```
+Allocate: account Address { address: <account_pubkey>, base: None } already in use
+```
+
 ## 2022-03-06 system_instruction::create_account
 
 `create_account` requires two signers: fee_payer and new_account.

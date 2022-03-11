@@ -11,6 +11,7 @@ use solana_program::{
 pub enum SystemTestInstruction {
     CreateAccount(CreateAccount),
     TransferLamports(TransferLamports),
+    Allocate(Allocate),
 }
 
 /// # Accounts
@@ -31,6 +32,16 @@ pub struct CreateAccount {
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub struct TransferLamports {
     pub amount: u64,
+}
+
+/// # Accounts
+///
+/// - 0: payer - writable, signer
+/// - 1: new_account - writable, signer
+/// - 2: system_program - executable
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+pub struct Allocate {
+    pub space: u64,
 }
 
 impl CreateAccount {
@@ -66,6 +77,26 @@ impl TransferLamports {
         let accounts = vec![
             AccountMeta::new(*from, true),
             AccountMeta::new(*to, false),
+            AccountMeta::new_readonly(system_program::ID, false),
+        ];
+
+        Ok(Instruction::new_with_borsh(*program_id, &instr, accounts))
+    }
+}
+
+impl Allocate {
+    pub fn build_instruction(
+        program_id: &Pubkey,
+        payer: &Pubkey,
+        new_account: &Pubkey,
+        space: u64,
+    ) -> Result<Instruction> {
+        let instr = Allocate { space };
+        let instr = ProgramInstruction::SystemTest(SystemTestInstruction::Allocate(instr));
+
+        let accounts = vec![
+            AccountMeta::new(*payer, true),
+            AccountMeta::new(*new_account, true),
             AccountMeta::new_readonly(system_program::ID, false),
         ];
 

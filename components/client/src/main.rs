@@ -28,18 +28,51 @@ fn main() -> Result<()> {
 
     {
         // Solana's system_instruction
-
         let payer = &config.keypair;
-        system_test::create_account_via_program(&client, &program_id, &payer)?;
-        system_test::create_account_via_rpc(&client, &payer)?;
 
-        let from = payer;
-        let to = Pubkey::new_unique();
-        println!("transfer to account {:#?}", to);
-        system_test::transfer_via_program(&client, &program_id, &from, &to)?;
-        system_test::transfer_via_rpc(&client, &from, &to)?;
-        let to_account = client.get_account(&to)?;
-        println!("account update: {:#?}", to_account);
+        {
+            let new_account_for_program_test = Keypair::new();
+            system_test::create_account_via_program(
+                &client,
+                &program_id,
+                &payer,
+                &new_account_for_program_test,
+            )?;
+
+            let new_account_for_rpc_test = Keypair::new();
+            system_test::create_account_via_rpc(&client, &payer, &new_account_for_rpc_test)?;
+
+            // system_instruction::transfer
+            let from = payer;
+            let to = Pubkey::new_unique();
+            println!("transfer to account {:#?}", to);
+            system_test::transfer_via_program(&client, &program_id, &from, &to)?;
+            system_test::transfer_via_rpc(&client, &from, &to)?;
+            let to_account = client.get_account(&to)?;
+            println!("account update: {:#?}", to_account);
+
+            // system_instruction::allocate
+            let account = client.get_account(&new_account_for_program_test.pubkey())?;
+            println!("account before allocate_via_program: {:#?}", account);
+
+            system_test::allocate_via_program(
+                &client,
+                &program_id,
+                &payer,
+                &new_account_for_program_test,
+            )?;
+
+            let account = client.get_account(&new_account_for_program_test.pubkey())?;
+            println!("account after allocate_via_program: {:#?}", account);
+
+            let account = client.get_account(&new_account_for_rpc_test.pubkey())?;
+            println!("account before allocate_via_rpc: {:#?}", account);
+
+            system_test::allocate_via_rpc(&client, &payer, &new_account_for_rpc_test)?;
+
+            let account = client.get_account(&new_account_for_rpc_test.pubkey())?;
+            println!("account after allocate_via_rpc: {:#?}", account);
+        }
     }
 
     {

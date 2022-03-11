@@ -19,7 +19,7 @@ pub fn sysvar_printing_via_program(
         Transaction::new_signed_with_payer(&[instr], Some(&payer.pubkey()), &[payer], blockhash);
 
     let sig = client.send_and_confirm_transaction(&tx)?;
-    println!("sig: {}", sig);
+    println!("sysvar_printing_via_program sig: {}", sig);
 
     Ok(())
 }

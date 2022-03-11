@@ -113,13 +113,13 @@ An account whose data.len() > 0 can't be tx fee payer.
 
 ### some of my tests and errors
 
-I tried to allocate the same account for the second time and it caused an error:
+Allocating a new account without transferring enough lamports for rent-exempt caused error:
 
 ```
 Transaction leaves an account with data with a lower balance than rent-exempt minimum
 ```
 
-I transferred some lamports to the account and then tried allocating:
+Allocating the same account for the second time caused error:
 
 ```
 Allocate: account Address { address: <account_pubkey>, base: None } already in use

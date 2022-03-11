@@ -3,7 +3,6 @@ use log::info;
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     commitment_config::CommitmentConfig,
-    pubkey::Pubkey,
     signature::{read_keypair_file, Keypair, Signer},
 };
 
@@ -32,46 +31,69 @@ fn main() -> Result<()> {
 
         {
             let new_account_for_program_test = Keypair::new();
+
             system_test::create_account_via_program(
                 &client,
                 &program_id,
-                &payer,
+                payer,
                 &new_account_for_program_test,
             )?;
 
-            let new_account_for_rpc_test = Keypair::new();
-            system_test::create_account_via_rpc(&client, &payer, &new_account_for_rpc_test)?;
-
-            // system_instruction::transfer
-            let from = payer;
-            let to = Pubkey::new_unique();
-            println!("transfer to account {:#?}", to);
-            system_test::transfer_via_program(&client, &program_id, &from, &to)?;
-            system_test::transfer_via_rpc(&client, &from, &to)?;
-            let to_account = client.get_account(&to)?;
-            println!("account update: {:#?}", to_account);
-
-            // system_instruction::allocate
             let account = client.get_account(&new_account_for_program_test.pubkey())?;
-            println!("account before allocate_via_program: {:#?}", account);
+            println!("new_account_for_program_test created: {:#?}", account);
 
+            let allocate_space = 1024;
             system_test::allocate_via_program(
                 &client,
                 &program_id,
-                &payer,
+                payer,
                 &new_account_for_program_test,
+                allocate_space,
             )?;
 
             let account = client.get_account(&new_account_for_program_test.pubkey())?;
             println!("account after allocate_via_program: {:#?}", account);
 
+            let amount = 1_000_000;
+            system_test::transfer_via_program(
+                &client,
+                &program_id,
+                payer,
+                &new_account_for_program_test.pubkey(),
+                amount,
+            )?;
+
+            let account = client.get_account(&new_account_for_program_test.pubkey())?;
+            println!("account after transfer_via_program: {:#?}", account);
+
+            let new_account_for_rpc_test = Keypair::new();
+
+            system_test::create_account_via_rpc(&client, payer, &new_account_for_rpc_test)?;
+
             let account = client.get_account(&new_account_for_rpc_test.pubkey())?;
             println!("account before allocate_via_rpc: {:#?}", account);
 
-            system_test::allocate_via_rpc(&client, &payer, &new_account_for_rpc_test)?;
+            let allocate_space = 2048;
+            system_test::allocate_via_rpc(
+                &client,
+                payer,
+                &new_account_for_rpc_test,
+                allocate_space,
+            )?;
 
             let account = client.get_account(&new_account_for_rpc_test.pubkey())?;
             println!("account after allocate_via_rpc: {:#?}", account);
+
+            let amount = 1_000_000;
+            system_test::transfer_via_rpc(
+                &client,
+                payer,
+                &new_account_for_rpc_test.pubkey(),
+                amount,
+            )?;
+
+            let account = client.get_account(&new_account_for_rpc_test.pubkey())?;
+            println!("account after transfer_via_rpc: {:#?}", account);
         }
     }
 

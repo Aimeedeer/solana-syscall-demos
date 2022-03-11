@@ -111,6 +111,18 @@ impl Exec for Allocate {
             assert_eq!(system_account.key, &system_program::ID);
         }
 
+        let rent = Rent::get()?;
+        let lamports = rent.minimum_balance(
+            self.space
+                .try_into()
+                .expect("failed converting `space` from u64 to usize"),
+        );
+
+        invoke(
+            &system_instruction::transfer(payer.key, new_account.key, lamports),
+            &[payer.clone(), new_account.clone()],
+        )?;
+
         invoke(
             &system_instruction::allocate(new_account.key, self.space),
             &[payer.clone(), new_account.clone(), system_account.clone()],

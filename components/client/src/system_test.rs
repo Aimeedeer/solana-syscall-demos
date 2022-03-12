@@ -32,6 +32,9 @@ pub fn create_account_via_program(
     let sig = client.send_and_confirm_transaction(&tx)?;
     println!("create_account_via_program tx signature: {:#?}", sig);
 
+    let account = client.get_account(&new_account.pubkey())?;
+    println!("new_account_for_program_test created: {:#?}", account);
+
     Ok(())
 }
 
@@ -64,42 +67,8 @@ pub fn create_account_via_rpc(
     let sig = client.send_and_confirm_transaction(&tx)?;
     println!("create_account_via_rpc tx signature: {:#?}", sig);
 
-    Ok(())
-}
-
-pub fn transfer_via_program(
-    client: &RpcClient,
-    program_id: &Pubkey,
-    from: &Keypair,
-    to: &Pubkey,
-    amount: u64,
-) -> Result<()> {
-    let instr = TransferLamports::build_instruction(program_id, &from.pubkey(), to, amount)?;
-
-    let blockhash = client.get_latest_blockhash()?;
-    let tx = Transaction::new_signed_with_payer(&[instr], Some(&from.pubkey()), &[from], blockhash);
-
-    let sig = client.send_and_confirm_transaction(&tx)?;
-    println!("transfer_via_program tx signature: {:#?}", sig);
-
-    Ok(())
-}
-
-pub fn transfer_via_rpc(
-    client: &RpcClient,
-    from: &Keypair,
-    to: &Pubkey,
-    amount: u64,
-) -> Result<()> {
-    println!("--------------------------------------- transfer_via_rpc ---------------------------------------");
-
-    let instr = system_instruction::transfer(&from.pubkey(), to, amount);
-
-    let blockhash = client.get_latest_blockhash()?;
-    let tx = Transaction::new_signed_with_payer(&[instr], Some(&from.pubkey()), &[from], blockhash);
-
-    let sig = client.send_and_confirm_transaction(&tx)?;
-    println!("transfer_via_rpc tx signature: {:#?}", sig);
+    let account = client.get_account(&new_account.pubkey())?;
+    println!("new_account_for_rpc_test created: {:#?}", account);
 
     Ok(())
 }
@@ -124,6 +93,9 @@ pub fn allocate_via_program(
 
     let sig = client.send_and_confirm_transaction(&tx)?;
     println!("allocate_via_program tx signature: {:#?}", sig);
+
+    let account = client.get_account(&new_account.pubkey())?;
+    println!("account after allocate_via_program: {:#?}", account);
 
     Ok(())
 }
@@ -152,5 +124,108 @@ pub fn allocate_via_rpc(
 
     let sig = client.send_and_confirm_transaction(&tx)?;
     println!("allocate_via_rpc tx signature: {:#?}", sig);
+
+    let account = client.get_account(&new_account.pubkey())?;
+    println!("account after allocate_via_rpc: {:#?}", account);
+
+    Ok(())
+}
+
+pub fn transfer_via_program(
+    client: &RpcClient,
+    program_id: &Pubkey,
+    from: &Keypair,
+    to: &Pubkey,
+    amount: u64,
+) -> Result<()> {
+    let instr = TransferLamports::build_instruction(program_id, &from.pubkey(), to, amount)?;
+
+    let blockhash = client.get_latest_blockhash()?;
+    let tx = Transaction::new_signed_with_payer(&[instr], Some(&from.pubkey()), &[from], blockhash);
+
+    let sig = client.send_and_confirm_transaction(&tx)?;
+    println!("transfer_via_program tx signature: {:#?}", sig);
+
+    let account = client.get_account(to)?;
+    println!("account after transfer_via_program: {:#?}", account);
+
+    Ok(())
+}
+
+pub fn transfer_via_rpc(
+    client: &RpcClient,
+    from: &Keypair,
+    to: &Pubkey,
+    amount: u64,
+) -> Result<()> {
+    println!("--------------------------------------- transfer_via_rpc ---------------------------------------");
+
+    let instr = system_instruction::transfer(&from.pubkey(), to, amount);
+
+    let blockhash = client.get_latest_blockhash()?;
+    let tx = Transaction::new_signed_with_payer(&[instr], Some(&from.pubkey()), &[from], blockhash);
+
+    let sig = client.send_and_confirm_transaction(&tx)?;
+    println!("transfer_via_rpc tx signature: {:#?}", sig);
+
+    let account = client.get_account(to)?;
+    println!("account after transfer_via_rpc: {:#?}", account);
+
+    Ok(())
+}
+
+pub fn transfer_many_via_program(
+    client: &RpcClient,
+    program_id: &Pubkey,
+    from: &Keypair,
+    to_and_amount: &[(Pubkey, u64)],
+) -> Result<()> {
+    let from_pubkey = from.pubkey();
+
+    let instr = to_and_amount
+        .iter()
+        .map(|(to_pubkey, amount)| {
+            TransferLamports::build_instruction(program_id, &from_pubkey, to_pubkey, *amount)
+        })
+        .collect::<Result<Vec<_>>>()?;
+
+    let blockhash = client.get_latest_blockhash()?;
+    let tx = Transaction::new_signed_with_payer(&instr, Some(&from_pubkey), &[from], blockhash);
+
+    let sig = client.send_and_confirm_transaction(&tx)?;
+    println!("transfer_many_via_program tx signature: {:#?}", sig);
+
+    for (to_pubkey, _) in to_and_amount {
+        let account = client.get_account(&to_pubkey)?;
+        println!("account after transfer_many_via_program: {:#?}", account);
+    }
+
+    Ok(())
+}
+
+pub fn transfer_many_via_rpc(
+    client: &RpcClient,
+    from: &Keypair,
+    to_and_amount: &[(Pubkey, u64)],
+) -> Result<()> {
+    println!("--------------------------------------- transfer_many_via_rpc ---------------------------------------");
+
+    let from_pubkey = from.pubkey();
+    let instr = to_and_amount
+        .iter()
+        .map(|(to_pubkey, amount)| system_instruction::transfer(&from_pubkey, to_pubkey, *amount))
+        .collect::<Vec<_>>();
+
+    let blockhash = client.get_latest_blockhash()?;
+    let tx = Transaction::new_signed_with_payer(&instr, Some(&from.pubkey()), &[from], blockhash);
+
+    let sig = client.send_and_confirm_transaction(&tx)?;
+    println!("transfer_many_via_rpc tx signature: {:#?}", sig);
+
+    for (to_pubkey, _) in to_and_amount {
+        let account = client.get_account(&to_pubkey)?;
+        println!("account after transfer_many_via_program: {:#?}", account);
+    }
+
     Ok(())
 }

@@ -30,8 +30,10 @@ fn main() -> Result<()> {
         let payer = &config.keypair;
 
         {
+            // program tests
             let new_account_for_program_test = Keypair::new();
 
+            // program test: create_account
             system_test::create_account_via_program(
                 &client,
                 &program_id,
@@ -39,9 +41,7 @@ fn main() -> Result<()> {
                 &new_account_for_program_test,
             )?;
 
-            let account = client.get_account(&new_account_for_program_test.pubkey())?;
-            println!("new_account_for_program_test created: {:#?}", account);
-
+            // program test: allocate
             let allocate_space = 1024;
             system_test::allocate_via_program(
                 &client,
@@ -51,9 +51,7 @@ fn main() -> Result<()> {
                 allocate_space,
             )?;
 
-            let account = client.get_account(&new_account_for_program_test.pubkey())?;
-            println!("account after allocate_via_program: {:#?}", account);
-
+            // program test: transfer
             let amount = 1_000_000;
             system_test::transfer_via_program(
                 &client,
@@ -63,16 +61,36 @@ fn main() -> Result<()> {
                 amount,
             )?;
 
-            let account = client.get_account(&new_account_for_program_test.pubkey())?;
-            println!("account after transfer_via_program: {:#?}", account);
+            // program test: transfer_many
+            {
+                let another_test_account = Keypair::new();
+                system_test::create_account_via_program(
+                    &client,
+                    &program_id,
+                    payer,
+                    &another_test_account,
+                )?;
 
+                let to_and_amount = vec![
+                    (new_account_for_program_test.pubkey(), 1_000_000),
+                    (another_test_account.pubkey(), 1_000),
+                ];
+
+                system_test::transfer_many_via_program(
+                    &client,
+                    &program_id,
+                    payer,
+                    &to_and_amount,
+                )?;
+            }
+
+            // rpc tests
             let new_account_for_rpc_test = Keypair::new();
 
+            // rpc test: create_account
             system_test::create_account_via_rpc(&client, payer, &new_account_for_rpc_test)?;
 
-            let account = client.get_account(&new_account_for_rpc_test.pubkey())?;
-            println!("account before allocate_via_rpc: {:#?}", account);
-
+            // rpc test: allocate
             let allocate_space = 2048;
             system_test::allocate_via_rpc(
                 &client,
@@ -81,9 +99,7 @@ fn main() -> Result<()> {
                 allocate_space,
             )?;
 
-            let account = client.get_account(&new_account_for_rpc_test.pubkey())?;
-            println!("account after allocate_via_rpc: {:#?}", account);
-
+            // rpc test: transfer
             let amount = 1_000_000;
             system_test::transfer_via_rpc(
                 &client,
@@ -92,8 +108,18 @@ fn main() -> Result<()> {
                 amount,
             )?;
 
-            let account = client.get_account(&new_account_for_rpc_test.pubkey())?;
-            println!("account after transfer_via_rpc: {:#?}", account);
+            // rpc test: transfer_many
+            {
+                let another_test_account = Keypair::new();
+                system_test::create_account_via_rpc(&client, payer, &another_test_account)?;
+
+                let to_and_amount = vec![
+                    (new_account_for_rpc_test.pubkey(), 1_000_000),
+                    (another_test_account.pubkey(), 1_000),
+                ];
+
+                system_test::transfer_many_via_rpc(&client, payer, &to_and_amount)?;
+            }
         }
     }
 

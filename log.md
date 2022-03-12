@@ -103,7 +103,7 @@ Program failed to complete: exceeded maximum number of instructions allowed (200
 ```
 
 
-## 2022-03-10 system_instruction::allocate restrictions
+## 2022-03-11 system_instruction::allocate restrictions
 
 The account that needs to be allocated has to be `signer` along with the tx fee payer.
 

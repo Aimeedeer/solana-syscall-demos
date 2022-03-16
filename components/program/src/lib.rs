@@ -1,11 +1,11 @@
 use borsh::de::BorshDeserialize;
 use common::{
-    system_test::{Allocate, CreateAccount, SystemTestInstruction, TransferLamports},
+    system_test::{Allocate, CreateAccount, SystemTestInstruction, TransferLamports, TransferLamportsToMany},
     sysvar_test::SysvarTestInstruction,
     ProgramInstruction,
 };
 use solana_program::{
-    account_info::{next_account_info, AccountInfo},
+    account_info::{next_account_info, next_account_infos, AccountInfo},
     entrypoint,
     entrypoint::ProgramResult,
     msg,
@@ -31,6 +31,7 @@ fn process_instruction(
         ProgramInstruction::SystemTest(instr) => match &instr {
             SystemTestInstruction::CreateAccount(instr) => instr,
             SystemTestInstruction::TransferLamports(instr) => instr,
+            SystemTestInstruction::TransferLamportsToMany(instr) => instr,
             SystemTestInstruction::Allocate(instr) => instr,
         },
         ProgramInstruction::SysvarTest(instr) => instr,
@@ -77,25 +78,6 @@ impl Exec for CreateAccount {
     }
 }
 
-impl Exec for TransferLamports {
-    fn exec(&self, _program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
-        msg!("--------------------------------------- transfer_via_program ---------------------------------------");
-
-        let account_info_iter = &mut accounts.iter();
-
-        let from = next_account_info(account_info_iter)?;
-        let to = next_account_info(account_info_iter)?;
-        let system_account = next_account_info(account_info_iter)?;
-
-        assert_eq!(system_account.key, &system_program::ID);
-
-        invoke(
-            &system_instruction::transfer(from.key, to.key, self.amount),
-            &[from.clone(), to.clone()],
-        )
-    }
-}
-
 impl Exec for Allocate {
     fn exec(&self, _program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         msg!("--------------------------------------- allocate_via_program ---------------------------------------");
@@ -127,6 +109,53 @@ impl Exec for Allocate {
             &system_instruction::allocate(new_account.key, self.space),
             &[payer.clone(), new_account.clone(), system_account.clone()],
         )
+    }
+}
+
+impl Exec for TransferLamports {
+    fn exec(&self, _program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        msg!("--------------------------------------- transfer_via_program ---------------------------------------");
+
+        let account_info_iter = &mut accounts.iter();
+
+        let from = next_account_info(account_info_iter)?;
+        let to = next_account_info(account_info_iter)?;
+        let system_account = next_account_info(account_info_iter)?;
+
+        assert_eq!(system_account.key, &system_program::ID);
+
+        invoke(
+            &system_instruction::transfer(from.key, to.key, self.amount),
+            &[from.clone(), to.clone()],
+        )
+    }
+}
+
+impl Exec for TransferLamportsToMany {
+    fn exec(&self, _program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        msg!("--------------------------------------- transfer_many_via_program ---------------------------------------");
+
+        let account_info_iter = &mut accounts.iter();
+
+        let from = next_account_info(account_info_iter)?;
+        let system_account = next_account_info(account_info_iter)?;
+        let to_accounts = next_account_infos(account_info_iter, account_info_iter.len())?;
+
+        assert_eq!(system_account.key, &system_program::ID);
+
+        let to_and_amount = to_accounts
+            .iter()
+            .zip(self.amount_list.iter())
+            .map(|(to, amount)| (*to.key, *amount))
+            .collect::<Vec<(Pubkey, u64)>>();
+
+        let instr_list = system_instruction::transfer_many(from.key, to_and_amount.as_ref());
+
+        for instr in instr_list {
+            invoke(&instr, accounts)?;
+        }
+
+        Ok(())
     }
 }
 

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use common::system_test::{Allocate, CreateAccount, TransferLamports};
+use common::system_test::{Allocate, CreateAccount, TransferLamports, TransferLamportsToMany};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     pubkey::Pubkey, signature::Signer, signer::keypair::Keypair, system_instruction,
@@ -180,23 +180,19 @@ pub fn transfer_many_via_program(
     from: &Keypair,
     to_and_amount: &[(Pubkey, u64)],
 ) -> Result<()> {
-    let from_pubkey = from.pubkey();
+    println!("to_and_amount: {:#?}", to_and_amount);
+    let instr = TransferLamportsToMany::build_instruction(program_id, &from.pubkey(), to_and_amount)?;
 
-    let instr = to_and_amount
-        .iter()
-        .map(|(to_pubkey, amount)| {
-            TransferLamports::build_instruction(program_id, &from_pubkey, to_pubkey, *amount)
-        })
-        .collect::<Result<Vec<_>>>()?;
-
+    println!("instr: {:#?}", instr);
+    
     let blockhash = client.get_latest_blockhash()?;
-    let tx = Transaction::new_signed_with_payer(&instr, Some(&from_pubkey), &[from], blockhash);
+    let tx = Transaction::new_signed_with_payer(&[instr], Some(&from.pubkey()), &[from], blockhash);
 
     let sig = client.send_and_confirm_transaction(&tx)?;
     println!("transfer_many_via_program tx signature: {:#?}", sig);
 
     for (to_pubkey, _) in to_and_amount {
-        let account = client.get_account(&to_pubkey)?;
+        let account = client.get_account(to_pubkey)?;
         println!("account after transfer_many_via_program: {:#?}", account);
     }
 
@@ -223,7 +219,7 @@ pub fn transfer_many_via_rpc(
     println!("transfer_many_via_rpc tx signature: {:#?}", sig);
 
     for (to_pubkey, _) in to_and_amount {
-        let account = client.get_account(&to_pubkey)?;
+        let account = client.get_account(to_pubkey)?;
         println!("account after transfer_many_via_program: {:#?}", account);
     }
 

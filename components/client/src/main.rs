@@ -122,13 +122,13 @@ fn main() -> Result<()> {
             }
         }
     }
-
+/*
     {
         // Solana's sysvar
         sysvar_test::sysvar_printing_via_program(&client, &program_id, &config.keypair)?;
         sysvar_test::sysvar_printing_via_rpc(&client)?;
     }
-
+*/
     Ok(())
 }
 

@@ -10,8 +10,9 @@ use solana_program::{
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub enum SystemTestInstruction {
     CreateAccount(CreateAccount),
-    TransferLamports(TransferLamports),
     Allocate(Allocate),
+    TransferLamports(TransferLamports),
+    TransferLamportsToMany(TransferLamportsToMany),
 }
 
 /// # Accounts
@@ -21,6 +22,16 @@ pub enum SystemTestInstruction {
 /// - 2: system_program - executable
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub struct CreateAccount {
+    pub space: u64,
+}
+
+/// # Accounts
+///
+/// - 0: payer - writable, signer
+/// - 1: new_account - writable, signer
+/// - 2: system_program - executable
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+pub struct Allocate {
     pub space: u64,
 }
 
@@ -36,12 +47,12 @@ pub struct TransferLamports {
 
 /// # Accounts
 ///
-/// - 0: payer - writable, signer
-/// - 1: new_account - writable, signer
-/// - 2: system_program - executable
+/// - 0: from - writable, signer
+/// - 1: system_program - executable
+/// - *: to - writable
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
-pub struct Allocate {
-    pub space: u64,
+pub struct TransferLamportsToMany {
+    pub amount_list: Vec<u64>,
 }
 
 impl CreateAccount {
@@ -53,6 +64,26 @@ impl CreateAccount {
     ) -> Result<Instruction> {
         let instr = CreateAccount { space };
         let instr = ProgramInstruction::SystemTest(SystemTestInstruction::CreateAccount(instr));
+
+        let accounts = vec![
+            AccountMeta::new(*payer, true),
+            AccountMeta::new(*new_account, true),
+            AccountMeta::new_readonly(system_program::ID, false),
+        ];
+
+        Ok(Instruction::new_with_borsh(*program_id, &instr, accounts))
+    }
+}
+
+impl Allocate {
+    pub fn build_instruction(
+        program_id: &Pubkey,
+        payer: &Pubkey,
+        new_account: &Pubkey,
+        space: u64,
+    ) -> Result<Instruction> {
+        let instr = Allocate { space };
+        let instr = ProgramInstruction::SystemTest(SystemTestInstruction::Allocate(instr));
 
         let accounts = vec![
             AccountMeta::new(*payer, true),
@@ -84,22 +115,26 @@ impl TransferLamports {
     }
 }
 
-impl Allocate {
+impl TransferLamportsToMany {
     pub fn build_instruction(
         program_id: &Pubkey,
-        payer: &Pubkey,
-        new_account: &Pubkey,
-        space: u64,
+        from: &Pubkey,
+        to_and_amount: &[(Pubkey, u64)],
     ) -> Result<Instruction> {
-        let instr = Allocate { space };
-        let instr = ProgramInstruction::SystemTest(SystemTestInstruction::Allocate(instr));
-
-        let accounts = vec![
-            AccountMeta::new(*payer, true),
-            AccountMeta::new(*new_account, true),
+        let mut amount_list = vec![];
+        let mut accounts = vec![
+            AccountMeta::new(*from, true),
             AccountMeta::new_readonly(system_program::ID, false),
         ];
 
+        for (to_pubkey, amount) in to_and_amount {
+            accounts.push(AccountMeta::new(*to_pubkey, false));
+            amount_list.push(*amount);
+        }
+
+        let instr = TransferLamportsToMany { amount_list };
+        let instr = ProgramInstruction::SystemTest(SystemTestInstruction::TransferLamportsToMany(instr));
+        
         Ok(Instruction::new_with_borsh(*program_id, &instr, accounts))
     }
 }

@@ -133,8 +133,9 @@ impl TransferLamportsToMany {
         }
 
         let instr = TransferLamportsToMany { amount_list };
-        let instr = ProgramInstruction::SystemTest(SystemTestInstruction::TransferLamportsToMany(instr));
-        
+        let instr =
+            ProgramInstruction::SystemTest(SystemTestInstruction::TransferLamportsToMany(instr));
+
         Ok(Instruction::new_with_borsh(*program_id, &instr, accounts))
     }
 }

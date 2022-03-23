@@ -1,6 +1,8 @@
 use borsh::de::BorshDeserialize;
 use common::{
-    system_test::{Allocate, CreateAccount, SystemTestInstruction, TransferLamports, TransferLamportsToMany},
+    system_test::{
+        Allocate, CreateAccount, SystemTestInstruction, TransferLamports, TransferLamportsToMany,
+    },
     sysvar_test::SysvarTestInstruction,
     ProgramInstruction,
 };

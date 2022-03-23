@@ -181,8 +181,9 @@ pub fn transfer_many_via_program(
     to_and_amount: &[(Pubkey, u64)],
 ) -> Result<()> {
     println!("to_and_amount: {:#?}", to_and_amount);
-    let instr = TransferLamportsToMany::build_instruction(program_id, &from.pubkey(), to_and_amount)?;
-    
+    let instr =
+        TransferLamportsToMany::build_instruction(program_id, &from.pubkey(), to_and_amount)?;
+
     let blockhash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(&[instr], Some(&from.pubkey()), &[from], blockhash);
 
@@ -210,7 +211,7 @@ pub fn transfer_many_via_rpc(
     }
 
     let instr = system_instruction::transfer_many(&from.pubkey(), to_and_amount);
-    
+
     let blockhash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(&instr, Some(&from.pubkey()), &[from], blockhash);
 

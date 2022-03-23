@@ -182,8 +182,6 @@ pub fn transfer_many_via_program(
 ) -> Result<()> {
     println!("to_and_amount: {:#?}", to_and_amount);
     let instr = TransferLamportsToMany::build_instruction(program_id, &from.pubkey(), to_and_amount)?;
-
-    println!("instr: {:#?}", instr);
     
     let blockhash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(&[instr], Some(&from.pubkey()), &[from], blockhash);
@@ -205,13 +203,14 @@ pub fn transfer_many_via_rpc(
     to_and_amount: &[(Pubkey, u64)],
 ) -> Result<()> {
     println!("--------------------------------------- transfer_many_via_rpc ---------------------------------------");
+    println!("transfer_many to_and_amount: {:#?}", to_and_amount);
+    for (to_pubkey, _) in to_and_amount {
+        let account = client.get_account(to_pubkey)?;
+        println!("account before transfer_many_via_rpc: {:#?}", account);
+    }
 
-    let from_pubkey = from.pubkey();
-    let instr = to_and_amount
-        .iter()
-        .map(|(to_pubkey, amount)| system_instruction::transfer(&from_pubkey, to_pubkey, *amount))
-        .collect::<Vec<_>>();
-
+    let instr = system_instruction::transfer_many(&from.pubkey(), to_and_amount);
+    
     let blockhash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(&instr, Some(&from.pubkey()), &[from], blockhash);
 
@@ -220,7 +219,7 @@ pub fn transfer_many_via_rpc(
 
     for (to_pubkey, _) in to_and_amount {
         let account = client.get_account(to_pubkey)?;
-        println!("account after transfer_many_via_program: {:#?}", account);
+        println!("account after transfer_many_via_rpc: {:#?}", account);
     }
 
     Ok(())

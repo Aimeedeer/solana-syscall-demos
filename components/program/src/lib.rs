@@ -1,5 +1,5 @@
 use borsh::de::BorshDeserialize;
-use common::{CustomInstruction, PrintSysvarsInstruction, DemoSecp256k1Instruction};
+use common::{CustomInstruction, DemoSecp256k1Instruction, PrintSysvarsInstruction};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint,
@@ -151,9 +151,7 @@ fn print_sysvars(
     Ok(())
 }
 
-fn demo_secp256k1(
-    _instruction: DemoSecp256k1Instruction,
-) -> ProgramResult {
+fn demo_secp256k1(_instruction: DemoSecp256k1Instruction) -> ProgramResult {
     msg!("demo secp256k1");
     todo!();
 }

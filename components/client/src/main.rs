@@ -1,5 +1,6 @@
 use anyhow::Result;
 use bincode;
+use clap::Parser;
 use common::PrintSysvarsInstruction;
 use log::info;
 use solana_client::rpc_client::RpcClient;
@@ -7,7 +8,6 @@ use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
-use clap::Parser;
 
 mod util;
 
@@ -55,9 +55,7 @@ fn print_sysvars_via_program(
     client: &RpcClient,
     program_keypair: &Keypair,
 ) -> Result<()> {
-    let instr = PrintSysvarsInstruction::build_instruction(
-        &program_keypair.pubkey(),
-    )?;
+    let instr = PrintSysvarsInstruction::build_instruction(&program_keypair.pubkey())?;
 
     let blockhash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(
@@ -73,15 +71,13 @@ fn print_sysvars_via_program(
     Ok(())
 }
 
-fn print_sysvars_via_client(
-    client: &RpcClient,
-) -> Result<()> {
+fn print_sysvars_via_client(client: &RpcClient) -> Result<()> {
     println!("--------------------------------------- sysvar client printing ---------------------------------------");
 
     use solana_sdk::sysvar::{
         clock, clock::Clock, epoch_schedule, epoch_schedule::EpochSchedule, instructions, rent,
-        rent::Rent, slot_hashes, slot_hashes::SlotHashes, slot_history,
-        slot_history::SlotHistory, stake_history, stake_history::StakeHistory, Sysvar,
+        rent::Rent, slot_hashes, slot_hashes::SlotHashes, slot_history, slot_history::SlotHistory,
+        stake_history, stake_history::StakeHistory, Sysvar,
     };
 
     let sysvar_program_id = clock::ID;
@@ -185,10 +181,8 @@ fn demo_secp256k1(
 ) -> Result<()> {
     let secret_key = libsecp256k1::SecretKey::random(&mut rand::thread_rng());
     let msg = b"hello world";
-    let verify_secp256k1_instr = solana_sdk::secp256k1_instruction::new_secp256k1_instruction(
-        &secret_key,
-        msg
-    );
+    let verify_secp256k1_instr =
+        solana_sdk::secp256k1_instruction::new_secp256k1_instruction(&secret_key, msg);
 
     let blockhash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(

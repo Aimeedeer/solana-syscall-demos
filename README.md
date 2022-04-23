@@ -52,16 +52,6 @@ $ solana program deploy <your_dir>/solana-sysvar-printing/target/deploy/program.
 Program Id: <your_program_id>
 ```
 
-**Things to be aware of:**
-
-`devnet` runtime provides 200,000 compute units, while `localhost`
-offers 1,400,000 compute units. (I didn't test it on `testnet` or
-`mainnet-beta`.) 
-
-This program works fine with `localhost`, but it
-needs to be commented out some code in `components/program/src/lib.rs`
-to avoid running out of computing budget while executing on `devnet`.
-
 Run it and print results:
 
 ```

@@ -26,7 +26,7 @@ fn process_instruction(
             print_sysvars(instr, accounts, instruction_data)?;
         }
         CustomInstruction::DemoSecp256k1(instr) => {
-            demo_secp256k1(instr)?;
+            demo_secp256k1(instr, accounts)?;
         }
     }
 
@@ -151,7 +151,26 @@ fn print_sysvars(
     Ok(())
 }
 
-fn demo_secp256k1(_instruction: DemoSecp256k1Instruction) -> ProgramResult {
+fn demo_secp256k1(
+    instruction: DemoSecp256k1Instruction,
+    accounts: &[AccountInfo],
+) -> ProgramResult {
     msg!("demo secp256k1");
-    todo!();
+
+    use solana_program::sysvar;
+    use solana_program::secp256k1_program;
+
+    let account_info_iter = &mut accounts.iter();
+
+    let instructions_sysvar_account = next_account_info(account_info_iter)?;
+    assert!(sysvar::instructions::check_id(instructions_sysvar_account.key));
+
+    let current_instr_index = sysvar::instructions::load_current_index_checked(instructions_sysvar_account)?;
+    let secp256k1_instr_index = current_instr_index.checked_sub(1).expect("overflow");
+    let secp256k1_instr =
+        sysvar::instructions::load_instruction_at_checked(secp256k1_instr_index.into(), instructions_sysvar_account)?;
+
+    assert!(secp256k1_program::check_id(&secp256k1_instr.program_id));
+
+    todo!()
 }

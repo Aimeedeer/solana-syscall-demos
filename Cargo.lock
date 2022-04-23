@@ -1921,6 +1921,7 @@ dependencies = [
 name = "program"
 version = "0.1.0"
 dependencies = [
+ "bincode",
  "borsh",
  "borsh-derive",
  "common",

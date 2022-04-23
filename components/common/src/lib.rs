@@ -46,14 +46,29 @@ impl PrintSysvarsInstruction {
     }
 }
 
+/// # Accounts
+///
+/// - 0: instructions sysvar
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
-pub struct DemoSecp256k1Instruction {}
+pub struct DemoSecp256k1Instruction {
+    message: Vec<u8>,
+    signer_pubkey: [u8; 20],
+}
 
 impl DemoSecp256k1Instruction {
-    pub fn build_instruction(program_id: &Pubkey) -> Result<Instruction> {
-        let instr = CustomInstruction::DemoSecp256k1(DemoSecp256k1Instruction {});
+    pub fn build_instruction(
+        program_id: &Pubkey,
+        message: Vec<u8>,
+        signer_pubkey: [u8; 20],
+    ) -> Result<Instruction> {
+        let instr = CustomInstruction::DemoSecp256k1(DemoSecp256k1Instruction {
+            message,
+            signer_pubkey,
+        });
 
-        let accounts = vec![];
+        let accounts = vec![
+            AccountMeta::new_readonly(sysvar::instructions::ID, false),
+        ];
 
         Ok(Instruction::new_with_borsh(*program_id, &instr, accounts))
     }

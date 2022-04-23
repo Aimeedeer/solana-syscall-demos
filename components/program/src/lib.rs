@@ -166,7 +166,6 @@ fn demo_secp256k1(
     assert!(sysvar::instructions::check_id(instructions_sysvar_account.key));
 
     // `new_secp256k1_instruction` generates an instruction that must be at index 0.
-    let secp256k1_instr_index = 0;
     let secp256k1_instr =
         sysvar::instructions::load_instruction_at_checked(0, instructions_sysvar_account)?;
 
@@ -179,5 +178,53 @@ fn demo_secp256k1(
     // `new_secp256k1_instruction` generates an instruction that contains one signature.
     assert_eq!(1, num_signatures);
 
-    todo!()
+    let offsets_slice = &secp256k1_instr.data[1..SIGNATURE_OFFSETS_SERIALIZED_SIZE + 1];
+
+    let offsets: SecpSignatureOffsets = bincode::deserialize(offsets_slice)
+        .expect("deserialize");
+
+    // `new_secp256k1_instruction` generates an instruction that only uses instruction index 0.
+    assert_eq!(0, offsets.signature_instruction_index);
+    assert_eq!(0, offsets.eth_address_instruction_index);
+    assert_eq!(0, offsets.message_instruction_index);
+
+    // Verify the public key we expect signed the message we expect.
+    // These are the checks that are ultimately required for a program
+    // to verify a signature.
+
+    let verified_pubkey = &secp256k1_instr.data[
+        usize::from(offsets.eth_address_offset)
+            ..
+            usize::from(offsets.eth_address_offset)
+            .saturating_add(HASHED_PUBKEY_SERIALIZED_SIZE)
+    ];
+    let verified_message = &secp256k1_instr.data[
+        usize::from(offsets.message_data_offset)
+            ..
+            usize::from(offsets.message_data_offset)
+            .saturating_add(usize::from(offsets.message_data_size))
+    ];
+
+    assert_eq!(&instruction.signer_pubkey[..], verified_pubkey);
+    assert_eq!(&instruction.message[..], verified_message);
+
+    Ok(())
+}
+
+const HASHED_PUBKEY_SERIALIZED_SIZE: usize = 20;
+//const SIGNATURE_SERIALIZED_SIZE: usize = 64;
+const SIGNATURE_OFFSETS_SERIALIZED_SIZE: usize = 11;
+
+use serde_derive::Deserialize;
+
+#[allow(unused)]
+#[derive(Deserialize)]
+struct SecpSignatureOffsets {
+    signature_offset: u16, // offset to [signature,recovery_id] of 64+1 bytes
+    signature_instruction_index: u8,
+    eth_address_offset: u16, // offset to eth_address of 20 bytes
+    eth_address_instruction_index: u8,
+    message_data_offset: u16, // offset to start of message data
+    message_data_size: u16,   // size of message data
+    message_instruction_index: u8,
 }

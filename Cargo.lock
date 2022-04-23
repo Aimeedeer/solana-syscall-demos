@@ -1925,6 +1925,8 @@ dependencies = [
  "borsh",
  "borsh-derive",
  "common",
+ "serde",
+ "serde_derive",
  "solana-program",
 ]
 

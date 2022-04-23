@@ -51,8 +51,8 @@ impl PrintSysvarsInstruction {
 /// - 0: instructions sysvar
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub struct DemoSecp256k1Instruction {
-    message: Vec<u8>,
-    signer_pubkey: [u8; 20],
+    pub message: Vec<u8>,
+    pub signer_pubkey: [u8; 20],
 }
 
 impl DemoSecp256k1Instruction {

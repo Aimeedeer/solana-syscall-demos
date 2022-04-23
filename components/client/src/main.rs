@@ -172,8 +172,5 @@ fn print_sysvars_via_client(
     let data: StakeHistory = bincode::deserialize(&account.data)?;
     println!("stake_history account data: {:#?}", data);
 
-    // print `()`
-    // account.deserialize_data()
-
     Ok(())
 }

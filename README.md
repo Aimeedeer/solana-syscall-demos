@@ -52,7 +52,14 @@ $ solana program deploy <your_dir>/solana-sysvar-printing/target/deploy/program.
 Program Id: <your_program_id>
 ```
 
-Run it and print results:
+The client program has several modes that demonstrate different capabilities.
+To list them run
+
+```
+$ cargo run -- --help
+```
+
+Printing sysvars via client calls
 
 ```
 $ cargo run -- print-sysvars-via-client
@@ -97,7 +104,14 @@ stake_history account data: StakeHistory(
 )
 ```
 
-To see `program`'s printing, run `solana logs` in another window:
+Printing sysvars via program CPI calls:
+
+```
+$ cargo run -- print-sysvars-via-program
+```
+
+To see the result of this command, as printed by the `program`,
+run `solana logs` in another window:
 
 ```
 $ solana logs

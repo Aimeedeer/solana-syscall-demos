@@ -1,6 +1,6 @@
 use anyhow::Result;
 use bincode;
-use common::CustomInstruction;
+use common::PrintSysvarsInstruction;
 use log::info;
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
@@ -20,7 +20,7 @@ enum Command {
 fn main() -> Result<()> {
     env_logger::Builder::new()
         .filter_level(log::LevelFilter::Info)
-        .filter_module("solana_client::rpc_client", log::LevelFilter::Debug)
+        .filter_module("solana_client", log::LevelFilter::Debug)
         .parse_default_env()
         .init();
 
@@ -51,7 +51,7 @@ fn print_sysvars_via_program(
     client: &RpcClient,
     program_keypair: &Keypair,
 ) -> Result<()> {
-    let instr = CustomInstruction::build_instruction(
+    let instr = PrintSysvarsInstruction::build_instruction(
         &config.keypair.pubkey(),
         &program_keypair.pubkey(),
     )?;

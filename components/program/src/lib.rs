@@ -16,6 +16,24 @@ fn process_instruction(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
+    let instruction = {
+        let mut instruction_data = instruction_data;
+        CustomInstruction::deserialize(&mut instruction_data)?
+    };
+
+    match instruction {
+        CustomInstruction::PrintSysvars(_instr) => {
+            print_sysvars(accounts, instruction_data)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn print_sysvars(
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> ProgramResult {
     msg!("sysvar program printing");
 
     let account_info_iter = &mut accounts.iter();

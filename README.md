@@ -55,7 +55,7 @@ Program Id: <your_program_id>
 Run it and print results:
 
 ```
-$ cargo run
+$ cargo run -- print-sysvars-via-client
 
 program id: <your_program_id>
 sig: <your_tx_signature>

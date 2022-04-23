@@ -165,12 +165,19 @@ fn demo_secp256k1(
     let instructions_sysvar_account = next_account_info(account_info_iter)?;
     assert!(sysvar::instructions::check_id(instructions_sysvar_account.key));
 
-    let current_instr_index = sysvar::instructions::load_current_index_checked(instructions_sysvar_account)?;
-    let secp256k1_instr_index = current_instr_index.checked_sub(1).expect("overflow");
+    // `new_secp256k1_instruction` generates an instruction that must be at index 0.
+    let secp256k1_instr_index = 0;
     let secp256k1_instr =
-        sysvar::instructions::load_instruction_at_checked(secp256k1_instr_index.into(), instructions_sysvar_account)?;
+        sysvar::instructions::load_instruction_at_checked(0, instructions_sysvar_account)?;
 
     assert!(secp256k1_program::check_id(&secp256k1_instr.program_id));
+
+    // There must be at least one byte.
+    assert!(secp256k1_instr.data.len() > 1);
+
+    let num_signatures = secp256k1_instr.data[0];
+    // `new_secp256k1_instruction` generates an instruction that contains one signature.
+    assert_eq!(1, num_signatures);
 
     todo!()
 }

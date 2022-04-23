@@ -56,7 +56,6 @@ fn print_sysvars_via_program(
     program_keypair: &Keypair,
 ) -> Result<()> {
     let instr = PrintSysvarsInstruction::build_instruction(
-        &config.keypair.pubkey(),
         &program_keypair.pubkey(),
     )?;
 

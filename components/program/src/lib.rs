@@ -42,8 +42,6 @@ fn print_sysvars(
 
     let account_info_iter = &mut accounts.iter();
 
-    let _payer_account = next_account_info(account_info_iter)?;
-
     let _system_program_account = next_account_info(account_info_iter)?;
 
     let clock_account = next_account_info(account_info_iter)?;

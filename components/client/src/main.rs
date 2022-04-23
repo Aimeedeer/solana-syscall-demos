@@ -7,8 +7,15 @@ use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
+use clap::Parser;
 
 mod util;
+
+#[derive(Parser)]
+enum Command {
+    PrintSysvarsViaProgram,
+    PrintSysvarsViaClient,
+}
 
 fn main() -> Result<()> {
     env_logger::Builder::new()
@@ -16,6 +23,8 @@ fn main() -> Result<()> {
         .filter_module("solana_client::rpc_client", log::LevelFilter::Debug)
         .parse_default_env()
         .init();
+
+    let command = Command::parse();
 
     let config = util::load_config()?;
     let client = util::connect(&config)?;
@@ -25,8 +34,14 @@ fn main() -> Result<()> {
     let program_keypair = util::get_program_keypair(&client)?;
     println!("program id: {:#?}", program_keypair.pubkey());
 
-    print_sysvars_via_program(&config, &client, &program_keypair)?;
-    print_sysvars_via_client(&client)?;
+    match command {
+        Command::PrintSysvarsViaProgram => {
+            print_sysvars_via_program(&config, &client, &program_keypair)?;
+        }
+        Command::PrintSysvarsViaClient => {
+            print_sysvars_via_client(&client)?;
+        }
+    }
 
     Ok(())
 }

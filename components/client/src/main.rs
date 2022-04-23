@@ -15,6 +15,7 @@ mod util;
 enum Command {
     PrintSysvarsViaProgram,
     PrintSysvarsViaClient,
+    DemoSecp256k1,
 }
 
 fn main() -> Result<()> {
@@ -40,6 +41,9 @@ fn main() -> Result<()> {
         }
         Command::PrintSysvarsViaClient => {
             print_sysvars_via_client(&client)?;
+        }
+        Command::DemoSecp256k1 => {
+            demo_secp256k1(&config, &client, &program_keypair)?;
         }
     }
 
@@ -173,4 +177,12 @@ fn print_sysvars_via_client(
     println!("stake_history account data: {:#?}", data);
 
     Ok(())
+}
+
+fn demo_secp256k1(
+    config: &util::Config,
+    client: &RpcClient,
+    program_keypair: &Keypair,
+) -> Result<()> {
+    todo!()
 }

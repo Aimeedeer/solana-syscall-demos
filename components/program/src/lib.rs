@@ -1,5 +1,5 @@
 use borsh::de::BorshDeserialize;
-use common::CustomInstruction;
+use common::{CustomInstruction, PrintSysvarsInstruction, DemoSecp256k1Instruction};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint,
@@ -22,8 +22,11 @@ fn process_instruction(
     };
 
     match instruction {
-        CustomInstruction::PrintSysvars(_instr) => {
-            print_sysvars(accounts, instruction_data)?;
+        CustomInstruction::PrintSysvars(instr) => {
+            print_sysvars(instr, accounts, instruction_data)?;
+        }
+        CustomInstruction::DemoSecp256k1(instr) => {
+            demo_secp256k1(instr)?;
         }
     }
 
@@ -31,6 +34,7 @@ fn process_instruction(
 }
 
 fn print_sysvars(
+    _instruction: PrintSysvarsInstruction,
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
@@ -147,4 +151,11 @@ fn print_sysvars(
     }
 
     Ok(())
+}
+
+fn demo_secp256k1(
+    _instruction: DemoSecp256k1Instruction,
+) -> ProgramResult {
+    msg!("demo secp256k1");
+    todo!();
 }

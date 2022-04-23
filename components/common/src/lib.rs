@@ -9,6 +9,7 @@ use solana_program::{
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub enum CustomInstruction {
     PrintSysvars(PrintSysvarsInstruction),
+    DemoSecp256k1(DemoSecp256k1Instruction),
 }
 
 /// # Accounts
@@ -43,6 +44,23 @@ impl PrintSysvarsInstruction {
             AccountMeta::new_readonly(sysvar::slot_hashes::ID, false),
             AccountMeta::new_readonly(sysvar::slot_history::ID, false),
             AccountMeta::new_readonly(sysvar::stake_history::ID, false),
+        ];
+
+        Ok(Instruction::new_with_borsh(*program_id, &instr, accounts))
+    }
+}
+
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+pub struct DemoSecp256k1Instruction {
+}
+
+impl DemoSecp256k1Instruction {
+    pub fn build_instruction(program_id: &Pubkey) -> Result<Instruction> {
+        let instr = CustomInstruction::DemoSecp256k1(
+            DemoSecp256k1Instruction { },
+        );
+
+        let accounts = vec![
         ];
 
         Ok(Instruction::new_with_borsh(*program_id, &instr, accounts))

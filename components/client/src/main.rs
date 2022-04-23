@@ -183,5 +183,23 @@ fn demo_secp256k1(
     client: &RpcClient,
     program_keypair: &Keypair,
 ) -> Result<()> {
-    todo!()
+    let secret_key = libsecp256k1::SecretKey::random(&mut rand::thread_rng());
+    let msg = b"hello world";
+    let verify_secp256k1_instr = solana_sdk::secp256k1_instruction::new_secp256k1_instruction(
+        &secret_key,
+        msg
+    );
+
+    let blockhash = client.get_latest_blockhash()?;
+    let tx = Transaction::new_signed_with_payer(
+        &[verify_secp256k1_instr],
+        Some(&config.keypair.pubkey()),
+        &[&config.keypair],
+        blockhash,
+    );
+
+    let sig = client.send_and_confirm_transaction(&tx)?;
+    println!("sig: {}", sig);
+
+    Ok(())
 }

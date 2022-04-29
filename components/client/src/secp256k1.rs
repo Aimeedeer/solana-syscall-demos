@@ -1,12 +1,13 @@
 use anyhow::Result;
-use common::DemoSecp256k1Instruction;
+use common::DemoSecp256k1BasicInstruction;
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
 
-pub fn demo_secp256k1(
+/// Basic secp256k1 signature verification using `new_secp256k1_instruction`.
+pub fn demo_secp256k1_basic(
     config: &crate::util::Config,
     client: &RpcClient,
     program_keypair: &Keypair,
@@ -18,7 +19,7 @@ pub fn demo_secp256k1(
 
     let public_key = libsecp256k1::PublicKey::from_secret_key(&secret_key);
     let public_key = solana_sdk::secp256k1_instruction::construct_eth_pubkey(&public_key);
-    let program_instr = DemoSecp256k1Instruction::build_instruction(
+    let program_instr = DemoSecp256k1BasicInstruction::build_instruction(
         &program_keypair.pubkey(),
         msg.to_vec(),
         public_key,

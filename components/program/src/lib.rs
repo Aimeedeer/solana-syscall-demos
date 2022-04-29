@@ -27,8 +27,11 @@ fn process_instruction(
         CustomInstruction::PrintSysvars(instr) => {
             print_sysvars(instr, accounts, instruction_data)?;
         }
-        CustomInstruction::DemoSecp256k1(instr) => {
-            secp256k1::demo_secp256k1(instr, accounts)?;
+        CustomInstruction::DemoSecp256k1Basic(instr) => {
+            secp256k1::demo_secp256k1_basic(instr, accounts)?;
+        }
+        CustomInstruction::DemoSecp256k1Recover(instr) => {
+            secp256k1::demo_secp256k1_recover(instr, accounts)?;
         }
     }
 

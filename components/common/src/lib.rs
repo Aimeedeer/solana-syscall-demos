@@ -9,7 +9,8 @@ use solana_program::{
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub enum CustomInstruction {
     PrintSysvars(PrintSysvarsInstruction),
-    DemoSecp256k1(DemoSecp256k1Instruction),
+    DemoSecp256k1Basic(DemoSecp256k1BasicInstruction),
+    DemoSecp256k1Recover(DemoSecp256k1RecoverInstruction),
 }
 
 /// # Accounts
@@ -50,18 +51,18 @@ impl PrintSysvarsInstruction {
 ///
 /// - 0: instructions sysvar
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
-pub struct DemoSecp256k1Instruction {
+pub struct DemoSecp256k1BasicInstruction {
     pub message: Vec<u8>,
     pub signer_pubkey: [u8; 20],
 }
 
-impl DemoSecp256k1Instruction {
+impl DemoSecp256k1BasicInstruction {
     pub fn build_instruction(
         program_id: &Pubkey,
         message: Vec<u8>,
         signer_pubkey: [u8; 20],
     ) -> Result<Instruction> {
-        let instr = CustomInstruction::DemoSecp256k1(DemoSecp256k1Instruction {
+        let instr = CustomInstruction::DemoSecp256k1Basic(DemoSecp256k1BasicInstruction {
             message,
             signer_pubkey,
         });
@@ -69,6 +70,38 @@ impl DemoSecp256k1Instruction {
         let accounts = vec![
             AccountMeta::new_readonly(sysvar::instructions::ID, false),
         ];
+
+        Ok(Instruction::new_with_borsh(*program_id, &instr, accounts))
+    }
+}
+
+/// # Accounts
+///
+/// None
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+pub struct DemoSecp256k1RecoverInstruction {
+    pub hash: [u8; 32],
+    pub recovery_id: u8,
+    pub signature: [u8; 64],
+    pub expected_signer_pubkey: [u8; 20],
+}
+
+impl DemoSecp256k1RecoverInstruction {
+    pub fn build_instruction(
+        program_id: &Pubkey,
+        hash: [u8; 32],
+        recovery_id: u8,
+        signature: [u8; 64],
+        expected_signer_pubkey: [u8; 20],
+    ) -> Result<Instruction> {
+        let instr = CustomInstruction::DemoSecp256k1Recover(DemoSecp256k1RecoverInstruction {
+            hash,
+            recovery_id,
+            signature,
+            expected_signer_pubkey,
+        });
+
+        let accounts = vec![];
 
         Ok(Instruction::new_with_borsh(*program_id, &instr, accounts))
     }

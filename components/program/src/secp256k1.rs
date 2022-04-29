@@ -1,4 +1,4 @@
-use common::DemoSecp256k1Instruction;
+use common::{DemoSecp256k1BasicInstruction, DemoSecp256k1RecoverInstruction};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
@@ -26,8 +26,8 @@ mod defs {
     }
 }
 
-pub fn demo_secp256k1(
-    instruction: DemoSecp256k1Instruction,
+pub fn demo_secp256k1_basic(
+    instruction: DemoSecp256k1BasicInstruction,
     accounts: &[AccountInfo],
 ) -> ProgramResult {
     msg!("demo secp256k1");
@@ -67,6 +67,8 @@ pub fn demo_secp256k1(
     // Verify the public key we expect signed the message we expect.
     // These are the checks that are ultimately required for a program
     // to verify a signature.
+    //
+    // Checking these verifies that `verified_pubkey` signed `verified_message`.
 
     let verified_pubkey = &secp256k1_instr.data[
         usize::from(offsets.eth_address_offset)
@@ -85,4 +87,11 @@ pub fn demo_secp256k1(
     assert_eq!(&instruction.message[..], verified_message);
 
     Ok(())
+}
+
+pub fn demo_secp256k1_recover(
+    _instruction: DemoSecp256k1RecoverInstruction,
+    _accounts: &[AccountInfo],
+) -> ProgramResult {
+    todo!()
 }

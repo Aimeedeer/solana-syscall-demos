@@ -67,9 +67,7 @@ impl DemoSecp256k1BasicInstruction {
             signer_pubkey,
         });
 
-        let accounts = vec![
-            AccountMeta::new_readonly(sysvar::instructions::ID, false),
-        ];
+        let accounts = vec![AccountMeta::new_readonly(sysvar::instructions::ID, false)];
 
         Ok(Instruction::new_with_borsh(*program_id, &instr, accounts))
     }

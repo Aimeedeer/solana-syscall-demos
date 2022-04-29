@@ -44,6 +44,7 @@ pub fn demo_secp256k1(
     let secp256k1_instr =
         sysvar::instructions::load_instruction_at_checked(0, instructions_sysvar_account)?;
 
+    // Verify it is a secp256k1 instruction.
     assert!(secp256k1_program::check_id(&secp256k1_instr.program_id));
 
     // There must be at least one byte.

@@ -78,24 +78,24 @@ impl DemoSecp256k1BasicInstruction {
 /// None
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub struct DemoSecp256k1RecoverInstruction {
-    pub hash: [u8; 32],
-    pub recovery_id: u8,
+    pub message: Vec<u8>,
     pub signature: [u8; 64],
+    pub recovery_id: u8,
     pub expected_signer_pubkey: [u8; 20],
 }
 
 impl DemoSecp256k1RecoverInstruction {
     pub fn build_instruction(
         program_id: &Pubkey,
-        hash: [u8; 32],
-        recovery_id: u8,
+        message: Vec<u8>,
         signature: [u8; 64],
+        recovery_id: u8,
         expected_signer_pubkey: [u8; 20],
     ) -> Result<Instruction> {
         let instr = CustomInstruction::DemoSecp256k1Recover(DemoSecp256k1RecoverInstruction {
-            hash,
-            recovery_id,
+            message,
             signature,
+            recovery_id,
             expected_signer_pubkey,
         });
 

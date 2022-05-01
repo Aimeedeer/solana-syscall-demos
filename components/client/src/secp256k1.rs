@@ -1,5 +1,5 @@
 use anyhow::Result;
-use common::DemoSecp256k1BasicInstruction;
+use common::{DemoSecp256k1BasicInstruction, DemoSecp256k1RecoverInstruction};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     keccak,
@@ -68,6 +68,17 @@ pub fn demo_secp256k1_recover(
     let signature = signature.serialize();
 
     assert_eq!(signature.len(), secp256k1_instruction::SIGNATURE_SERIALIZED_SIZE);
+
+    let mut public_key_bytes = [0; 64];
+    public_key_bytes.copy_from_slice(&public_key.serialize()[1..65]);
+
+    let instr = DemoSecp256k1RecoverInstruction::build_instruction(
+        &program_keypair.pubkey(),
+        message.to_vec(),
+        signature,
+        recovery_id.serialize(),
+        public_key_bytes,
+    );
 
     todo!()
 }

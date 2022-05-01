@@ -81,7 +81,7 @@ pub struct DemoSecp256k1RecoverInstruction {
     pub message: Vec<u8>,
     pub signature: [u8; 64],
     pub recovery_id: u8,
-    pub expected_signer_pubkey: [u8; 20],
+    pub expected_signer_pubkey: [u8; 64],
 }
 
 impl DemoSecp256k1RecoverInstruction {
@@ -90,7 +90,7 @@ impl DemoSecp256k1RecoverInstruction {
         message: Vec<u8>,
         signature: [u8; 64],
         recovery_id: u8,
-        expected_signer_pubkey: [u8; 20],
+        expected_signer_pubkey: [u8; 64],
     ) -> Result<Instruction> {
         let instr = CustomInstruction::DemoSecp256k1Recover(DemoSecp256k1RecoverInstruction {
             message,

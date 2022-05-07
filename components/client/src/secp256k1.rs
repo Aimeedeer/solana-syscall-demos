@@ -78,5 +78,16 @@ pub fn demo_secp256k1_recover(
         expected_signer_pubkey: public_key_bytes,
     }.build_instruction(&program_keypair.pubkey())?;
 
-    todo!()
+    let blockhash = client.get_latest_blockhash()?;
+    let tx = Transaction::new_signed_with_payer(
+        &[instr],
+        Some(&config.keypair.pubkey()),
+        &[&config.keypair],
+        blockhash,
+    );
+
+    let sig = client.send_and_confirm_transaction(&tx)?;
+    println!("sig: {}", sig);
+
+    Ok(())
 }

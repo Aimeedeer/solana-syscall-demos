@@ -25,11 +25,10 @@ pub fn demo_secp256k1_basic(
 
     let public_key = libsecp256k1::PublicKey::from_secret_key(&secret_key);
     let public_key = secp256k1_instruction::construct_eth_pubkey(&public_key);
-    let program_instr = DemoSecp256k1BasicInstruction::build_instruction(
-        &program_keypair.pubkey(),
-        msg.to_vec(),
-        public_key,
-    )?;
+    let program_instr = DemoSecp256k1BasicInstruction {
+        message: msg.to_vec(),
+        signer_pubkey: public_key,
+    }.build_instruction(&program_keypair.pubkey())?;
 
     let blockhash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(
@@ -72,13 +71,12 @@ pub fn demo_secp256k1_recover(
     let mut public_key_bytes = [0; 64];
     public_key_bytes.copy_from_slice(&public_key.serialize()[1..65]);
 
-    let instr = DemoSecp256k1RecoverInstruction::build_instruction(
-        &program_keypair.pubkey(),
-        message.to_vec(),
+    let instr = DemoSecp256k1RecoverInstruction {
+        message: message.to_vec(),
         signature,
-        recovery_id.serialize(),
-        public_key_bytes,
-    );
+        recovery_id: recovery_id.serialize(),
+        expected_signer_pubkey: public_key_bytes,
+    }.build_instruction(&program_keypair.pubkey())?;
 
     todo!()
 }

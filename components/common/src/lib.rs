@@ -25,13 +25,18 @@ pub enum CustomInstruction {
 /// - 7: stake_history - executable
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub struct PrintSysvarsInstruction {
-    test_amount: u64,
+    pub section: PrintSysvarsSection,
+}
+
+/// This is just used to break up execution to fit in the CPU budget.
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+pub enum PrintSysvarsSection {
+    One,
 }
 
 impl PrintSysvarsInstruction {
-    pub fn build_instruction(program_id: &Pubkey) -> Result<Instruction> {
-        let instr = CustomInstruction::PrintSysvars(PrintSysvarsInstruction { test_amount: 1_000 });
-
+    pub fn build_instruction(self, program_id: &Pubkey) -> Result<Instruction> {
+        let instr = CustomInstruction::PrintSysvars(self);
         let accounts = vec![
             AccountMeta::new_readonly(system_program::ID, false),
             AccountMeta::new_readonly(sysvar::clock::ID, false),
@@ -57,16 +62,8 @@ pub struct DemoSecp256k1BasicInstruction {
 }
 
 impl DemoSecp256k1BasicInstruction {
-    pub fn build_instruction(
-        program_id: &Pubkey,
-        message: Vec<u8>,
-        signer_pubkey: [u8; 20],
-    ) -> Result<Instruction> {
-        let instr = CustomInstruction::DemoSecp256k1Basic(DemoSecp256k1BasicInstruction {
-            message,
-            signer_pubkey,
-        });
-
+    pub fn build_instruction(self, program_id: &Pubkey) -> Result<Instruction> {
+        let instr = CustomInstruction::DemoSecp256k1Basic(self);
         let accounts = vec![AccountMeta::new_readonly(sysvar::instructions::ID, false)];
 
         Ok(Instruction::new_with_borsh(*program_id, &instr, accounts))
@@ -85,20 +82,8 @@ pub struct DemoSecp256k1RecoverInstruction {
 }
 
 impl DemoSecp256k1RecoverInstruction {
-    pub fn build_instruction(
-        program_id: &Pubkey,
-        message: Vec<u8>,
-        signature: [u8; 64],
-        recovery_id: u8,
-        expected_signer_pubkey: [u8; 64],
-    ) -> Result<Instruction> {
-        let instr = CustomInstruction::DemoSecp256k1Recover(DemoSecp256k1RecoverInstruction {
-            message,
-            signature,
-            recovery_id,
-            expected_signer_pubkey,
-        });
-
+    pub fn build_instruction(self, program_id: &Pubkey) -> Result<Instruction> {
+        let instr = CustomInstruction::DemoSecp256k1Recover(self);
         let accounts = vec![];
 
         Ok(Instruction::new_with_borsh(*program_id, &instr, accounts))

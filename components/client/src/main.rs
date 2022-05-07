@@ -1,7 +1,7 @@
 use anyhow::Result;
 use bincode;
 use clap::Parser;
-use common::PrintSysvarsInstruction;
+use common::{PrintSysvarsInstruction, PrintSysvarsSection};
 use log::info;
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
@@ -56,7 +56,9 @@ fn print_sysvars_via_program(
     client: &RpcClient,
     program_keypair: &Keypair,
 ) -> Result<()> {
-    let instr = PrintSysvarsInstruction::build_instruction(&program_keypair.pubkey())?;
+    let instr = PrintSysvarsInstruction {
+        section: PrintSysvarsSection::One,
+    }.build_instruction(&program_keypair.pubkey())?;
 
     let blockhash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(

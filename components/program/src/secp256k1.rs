@@ -2,8 +2,7 @@ use common::{DemoSecp256k1BasicInstruction, DemoSecp256k1RecoverInstruction};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
-    keccak,
-    msg,
+    keccak, msg,
     program_error::ProgramError,
     secp256k1_recover::secp256k1_recover,
 };
@@ -92,7 +91,6 @@ pub fn demo_secp256k1_recover(
     instruction: DemoSecp256k1RecoverInstruction,
     _accounts: &[AccountInfo],
 ) -> ProgramResult {
-
     let message_hash = {
         let mut hasher = keccak::Hasher::default();
         hasher.hash(&instruction.message);
@@ -103,10 +101,17 @@ pub fn demo_secp256k1_recover(
         &message_hash.0,
         instruction.recovery_id,
         &instruction.signature,
-    ).map_err(|_| ProgramError::InvalidArgument)?;
+    )
+    .map_err(|_| ProgramError::InvalidArgument)?;
 
-    msg!("recovered signer pubkey: {}", hex::encode(recovered_pubkey.0));
-    msg!("expected signer pubkey: {}", hex::encode(instruction.expected_signer_pubkey));
+    msg!(
+        "recovered signer pubkey: {}",
+        hex::encode(recovered_pubkey.0)
+    );
+    msg!(
+        "expected signer pubkey: {}",
+        hex::encode(instruction.expected_signer_pubkey)
+    );
 
     assert_eq!(recovered_pubkey.0, instruction.expected_signer_pubkey);
 

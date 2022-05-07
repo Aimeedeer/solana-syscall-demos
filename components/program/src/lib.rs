@@ -87,7 +87,8 @@ fn print_sysvars(
                 assert!(epoch_schedule::check_id(epoch_schedule_account.key));
                 assert_eq!(*epoch_schedule_account.key, epoch_schedule::ID);
 
-                let epoch_schedule_from_account = EpochSchedule::from_account_info(epoch_schedule_account)?;
+                let epoch_schedule_from_account =
+                    EpochSchedule::from_account_info(epoch_schedule_account)?;
                 let epoch_schedule_from_sysvar = EpochSchedule::get()?;
 
                 assert_eq!(epoch_schedule_from_account, epoch_schedule_from_sysvar);
@@ -103,13 +104,16 @@ fn print_sysvars(
                 assert_eq!(*instructions_account.key, instructions::ID);
 
                 let current_index = instructions::load_current_index_checked(instructions_account)?;
-                let instructions_from_account =
-                    instructions::load_instruction_at_checked(current_index.into(), instructions_account)?;
+                let instructions_from_account = instructions::load_instruction_at_checked(
+                    current_index.into(),
+                    instructions_account,
+                )?;
 
                 assert_eq!(instructions_from_account.data, instruction_data);
 
                 let mut instruction_data = instruction_data;
-                let deserialized_instruction_data = CustomInstruction::deserialize(&mut instruction_data)?;
+                let deserialized_instruction_data =
+                    CustomInstruction::deserialize(&mut instruction_data)?;
 
                 msg!(
                     "deserialized_instruction_data: {:#?}",

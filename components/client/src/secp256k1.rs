@@ -2,10 +2,9 @@ use anyhow::Result;
 use common::{DemoSecp256k1BasicInstruction, DemoSecp256k1RecoverInstruction};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
-    keccak,
+    keccak, secp256k1_instruction,
     signature::{Keypair, Signer},
     transaction::Transaction,
-    secp256k1_instruction,
 };
 
 /// Basic secp256k1 signature verification using `new_secp256k1_instruction`.
@@ -20,15 +19,15 @@ pub fn demo_secp256k1_basic(
     // `secp256k_instruction::verify` (the secp256k1 program), this message is
     // keccak-hashed before signing, as in EIP-712.
     let msg = b"hello world";
-    let verify_secp256k1_instr =
-        secp256k1_instruction::new_secp256k1_instruction(&secret_key, msg);
+    let verify_secp256k1_instr = secp256k1_instruction::new_secp256k1_instruction(&secret_key, msg);
 
     let public_key = libsecp256k1::PublicKey::from_secret_key(&secret_key);
     let public_key = secp256k1_instruction::construct_eth_pubkey(&public_key);
     let program_instr = DemoSecp256k1BasicInstruction {
         message: msg.to_vec(),
         signer_pubkey: public_key,
-    }.build_instruction(&program_keypair.pubkey())?;
+    }
+    .build_instruction(&program_keypair.pubkey())?;
 
     let blockhash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(
@@ -66,7 +65,10 @@ pub fn demo_secp256k1_recover(
     let (signature, recovery_id) = libsecp256k1::sign(&secp_message, &secret_key);
     let signature = signature.serialize();
 
-    assert_eq!(signature.len(), secp256k1_instruction::SIGNATURE_SERIALIZED_SIZE);
+    assert_eq!(
+        signature.len(),
+        secp256k1_instruction::SIGNATURE_SERIALIZED_SIZE
+    );
 
     let mut public_key_bytes = [0; 64];
     public_key_bytes.copy_from_slice(&public_key.serialize()[1..65]);
@@ -76,7 +78,8 @@ pub fn demo_secp256k1_recover(
         signature,
         recovery_id: recovery_id.serialize(),
         expected_signer_pubkey: public_key_bytes,
-    }.build_instruction(&program_keypair.pubkey())?;
+    }
+    .build_instruction(&program_keypair.pubkey())?;
 
     let blockhash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(

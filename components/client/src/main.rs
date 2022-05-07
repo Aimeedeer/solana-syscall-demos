@@ -56,20 +56,28 @@ fn print_sysvars_via_program(
     client: &RpcClient,
     program_keypair: &Keypair,
 ) -> Result<()> {
-    let instr = PrintSysvarsInstruction {
-        section: PrintSysvarsSection::One,
-    }.build_instruction(&program_keypair.pubkey())?;
+    let sections = [
+        PrintSysvarsSection::One,
+        PrintSysvarsSection::Two,
+        PrintSysvarsSection::Three,
+    ];
 
-    let blockhash = client.get_latest_blockhash()?;
-    let tx = Transaction::new_signed_with_payer(
-        &[instr],
-        Some(&config.keypair.pubkey()),
-        &[&config.keypair],
-        blockhash,
-    );
+    for section in sections {
+        let instr = PrintSysvarsInstruction {
+            section,
+        }.build_instruction(&program_keypair.pubkey())?;
 
-    let sig = client.send_and_confirm_transaction(&tx)?;
-    println!("sig: {}", sig);
+        let blockhash = client.get_latest_blockhash()?;
+        let tx = Transaction::new_signed_with_payer(
+            &[instr],
+            Some(&config.keypair.pubkey()),
+            &[&config.keypair],
+            blockhash,
+        );
+
+        let sig = client.send_and_confirm_transaction(&tx)?;
+        println!("{:?} sig: {}", section, sig);
+    }
 
     Ok(())
 }

@@ -29,9 +29,11 @@ pub struct PrintSysvarsInstruction {
 }
 
 /// This is just used to break up execution to fit in the CPU budget.
-#[derive(BorshSerialize, BorshDeserialize, Debug)]
+#[derive(BorshSerialize, BorshDeserialize, Debug, Copy, Clone)]
 pub enum PrintSysvarsSection {
     One,
+    Two,
+    Three,
 }
 
 impl PrintSysvarsInstruction {

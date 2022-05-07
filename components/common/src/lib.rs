@@ -9,7 +9,7 @@ use solana_program::{
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub enum CustomInstruction {
     PrintSysvars(PrintSysvarsInstruction),
-    DemoSecp256k1Basic(DemoSecp256k1BasicInstruction),
+    DemoSecp256k1VerifyBasic(DemoSecp256k1VerifyBasicInstruction),
     DemoSecp256k1Recover(DemoSecp256k1RecoverInstruction),
 }
 
@@ -58,14 +58,14 @@ impl PrintSysvarsInstruction {
 ///
 /// - 0: instructions sysvar
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
-pub struct DemoSecp256k1BasicInstruction {
+pub struct DemoSecp256k1VerifyBasicInstruction {
     pub message: Vec<u8>,
     pub signer_pubkey: [u8; 20],
 }
 
-impl DemoSecp256k1BasicInstruction {
+impl DemoSecp256k1VerifyBasicInstruction {
     pub fn build_instruction(self, program_id: &Pubkey) -> Result<Instruction> {
-        let instr = CustomInstruction::DemoSecp256k1Basic(self);
+        let instr = CustomInstruction::DemoSecp256k1VerifyBasic(self);
         let accounts = vec![AccountMeta::new_readonly(sysvar::instructions::ID, false)];
 
         Ok(Instruction::new_with_borsh(*program_id, &instr, accounts))

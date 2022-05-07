@@ -1,4 +1,4 @@
-use common::{DemoSecp256k1BasicInstruction, DemoSecp256k1RecoverInstruction};
+use common::{DemoSecp256k1RecoverInstruction, DemoSecp256k1VerifyBasicInstruction};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
@@ -28,8 +28,8 @@ mod defs {
     }
 }
 
-pub fn demo_secp256k1_basic(
-    instruction: DemoSecp256k1BasicInstruction,
+pub fn demo_secp256k1_verify_basic(
+    instruction: DemoSecp256k1VerifyBasicInstruction,
     accounts: &[AccountInfo],
 ) -> ProgramResult {
     msg!("demo secp256k1");

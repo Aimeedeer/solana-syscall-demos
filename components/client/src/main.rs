@@ -16,7 +16,7 @@ mod util;
 enum Command {
     PrintSysvarsViaProgram,
     PrintSysvarsViaClient,
-    DemoSecp256k1Basic,
+    DemoSecp256k1VerifyBasic,
     DemoSecp256k1Recover,
 }
 
@@ -44,8 +44,8 @@ fn main() -> Result<()> {
         Command::PrintSysvarsViaClient => {
             print_sysvars_via_client(&client)?;
         }
-        Command::DemoSecp256k1Basic => {
-            secp256k1::demo_secp256k1_basic(&config, &client, &program_keypair)?;
+        Command::DemoSecp256k1VerifyBasic => {
+            secp256k1::demo_secp256k1_verify_basic(&config, &client, &program_keypair)?;
         }
         Command::DemoSecp256k1Recover => {
             secp256k1::demo_secp256k1_recover(&config, &client, &program_keypair)?;

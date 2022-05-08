@@ -1,7 +1,7 @@
 use anyhow::Result;
+use clap::Parser;
 use log::info;
 use solana_sdk::signature::Signer;
-use clap::Parser;
 mod secp256k1;
 mod sysvars;
 mod util;

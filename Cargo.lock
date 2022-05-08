@@ -476,6 +476,7 @@ dependencies = [
  "libsecp256k1",
  "log",
  "rand 0.7.3",
+ "solana-clap-utils",
  "solana-cli-config",
  "solana-client",
  "solana-sdk",

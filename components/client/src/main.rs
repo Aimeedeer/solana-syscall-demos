@@ -1,13 +1,20 @@
 use anyhow::Result;
-use clap::Parser;
 use log::info;
 use solana_sdk::signature::Signer;
-
+use clap::Parser;
 mod secp256k1;
 mod sysvars;
 mod util;
 
 #[derive(Parser)]
+struct Opts {
+    #[clap(subcommand)]
+    command: Command,
+    #[clap(long, global = true)]
+    url: Option<String>,
+}
+
+#[derive(clap::Subcommand)]
 enum Command {
     PrintSysvarsViaProgram,
     PrintSysvarsViaClient,
@@ -22,9 +29,10 @@ fn main() -> Result<()> {
         .parse_default_env()
         .init();
 
-    let command = Command::parse();
+    let opts = Opts::parse();
+    let command = opts.command;
 
-    let config = util::load_config()?;
+    let config = util::load_config(opts.url)?;
     let client = util::connect(&config)?;
     let version = client.get_version()?;
     info!("version: {}", version);

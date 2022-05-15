@@ -2,6 +2,8 @@ use anyhow::Result;
 use clap::Parser;
 use log::info;
 use solana_sdk::signature::Signer;
+
+mod invoke;
 mod secp256k1;
 mod sysvars;
 mod util;
@@ -20,6 +22,7 @@ enum Command {
     PrintSysvarsViaClient,
     DemoSecp256k1VerifyBasic,
     DemoSecp256k1Recover,
+    DemoInvoke,
 }
 
 fn main() -> Result<()> {
@@ -52,6 +55,9 @@ fn main() -> Result<()> {
         }
         Command::DemoSecp256k1Recover => {
             secp256k1::demo_secp256k1_recover(&config, &client, &program_keypair)?;
+        }
+        Command::DemoInvoke => {
+            invoke::demo_invoke(&config, &client, &program_keypair)?;
         }
     }
 

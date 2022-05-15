@@ -11,6 +11,7 @@ pub enum CustomInstruction {
     PrintSysvars(PrintSysvarsInstruction),
     DemoSecp256k1VerifyBasic(DemoSecp256k1VerifyBasicInstruction),
     DemoSecp256k1Recover(DemoSecp256k1RecoverInstruction),
+    DemoInvoke(DemoInvokeInstruction),
 }
 
 /// # Accounts
@@ -86,6 +87,22 @@ pub struct DemoSecp256k1RecoverInstruction {
 impl DemoSecp256k1RecoverInstruction {
     pub fn build_instruction(self, program_id: &Pubkey) -> Result<Instruction> {
         let instr = CustomInstruction::DemoSecp256k1Recover(self);
+        let accounts = vec![];
+
+        Ok(Instruction::new_with_borsh(*program_id, &instr, accounts))
+    }
+}
+
+/// # Accounts
+///
+/// None
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+pub struct DemoInvokeInstruction {
+}
+
+impl DemoInvokeInstruction {
+    pub fn build_instruction(self, program_id: &Pubkey) -> Result<Instruction> {
+        let instr = CustomInstruction::DemoInvoke(self);
         let accounts = vec![];
 
         Ok(Instruction::new_with_borsh(*program_id, &instr, accounts))

@@ -94,7 +94,7 @@ impl DemoSecp256k1RecoverInstruction {
 
 /// # Accounts
 ///
-/// None
+/// - 0: this program id - executable
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub struct DemoInvokeInstruction {
     pub mode: DemoInvokeMode,

@@ -11,7 +11,7 @@ mod sysvars;
 entrypoint!(process_instruction);
 
 fn process_instruction(
-    _program_id: &Pubkey,
+    program_id: &Pubkey,
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
@@ -31,7 +31,7 @@ fn process_instruction(
             secp256k1::demo_secp256k1_recover(instr, accounts)?;
         }
         CustomInstruction::DemoInvoke(instr) => {
-            invoke::demo_invoke(instr, accounts)?;
+            invoke::demo_invoke(program_id, instr, accounts)?;
         }
     }
 

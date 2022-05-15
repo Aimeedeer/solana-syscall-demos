@@ -97,12 +97,21 @@ impl DemoSecp256k1RecoverInstruction {
 /// None
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub struct DemoInvokeInstruction {
+    pub mode: DemoInvokeMode,
+}
+
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+pub enum DemoInvokeMode {
+    Caller,
+    Callee,
 }
 
 impl DemoInvokeInstruction {
     pub fn build_instruction(self, program_id: &Pubkey) -> Instruction {
         let instr = CustomInstruction::DemoInvoke(self);
-        let accounts = vec![];
+        let accounts = vec![
+            AccountMeta::new_readonly(program_id.clone(), false),
+        ];
 
         Instruction::new_with_borsh(*program_id, &instr, accounts)
     }

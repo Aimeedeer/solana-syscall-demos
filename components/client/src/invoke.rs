@@ -1,5 +1,5 @@
 use anyhow::Result;
-use common::{DemoInvokeInstruction};
+use common::{DemoInvokeInstruction, DemoInvokeMode};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     signature::{Keypair, Signer},
@@ -13,6 +13,7 @@ pub fn demo_invoke(
 ) -> Result<()> {
 
     let instr = DemoInvokeInstruction {
+        mode: DemoInvokeMode::Caller,
     }.build_instruction(&program_keypair.pubkey());
 
     let blockhash = client.get_latest_blockhash()?;

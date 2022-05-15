@@ -109,9 +109,7 @@ pub enum DemoInvokeMode {
 impl DemoInvokeInstruction {
     pub fn build_instruction(self, program_id: &Pubkey) -> Instruction {
         let instr = CustomInstruction::DemoInvoke(self);
-        let accounts = vec![
-            AccountMeta::new_readonly(program_id.clone(), false),
-        ];
+        let accounts = vec![AccountMeta::new_readonly(program_id.clone(), false)];
 
         Instruction::new_with_borsh(*program_id, &instr, accounts)
     }

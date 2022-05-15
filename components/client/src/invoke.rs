@@ -11,10 +11,10 @@ pub fn demo_invoke(
     client: &RpcClient,
     program_keypair: &Keypair,
 ) -> Result<()> {
-
     let instr = DemoInvokeInstruction {
         mode: DemoInvokeMode::Caller,
-    }.build_instruction(&program_keypair.pubkey());
+    }
+    .build_instruction(&program_keypair.pubkey());
 
     let blockhash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(

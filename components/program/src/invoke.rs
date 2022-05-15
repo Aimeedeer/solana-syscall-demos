@@ -1,9 +1,6 @@
 use common::{DemoInvokeInstruction, DemoInvokeMode};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult,
-    pubkey::Pubkey,
-    msg,
-    program,
+    account_info::AccountInfo, entrypoint::ProgramResult, msg, program, pubkey::Pubkey,
 };
 
 pub fn demo_invoke(
@@ -19,18 +16,17 @@ pub fn demo_invoke(
             do_callee_mode()?;
         }
     }
-    
+
     Ok(())
 }
 
-fn do_caller_mode(
-    program_id: &Pubkey,
-) -> ProgramResult {
+fn do_caller_mode(program_id: &Pubkey) -> ProgramResult {
     msg!("invoke caller");
 
     let instr = DemoInvokeInstruction {
         mode: DemoInvokeMode::Callee,
-    }.build_instruction(program_id);
+    }
+    .build_instruction(program_id);
 
     program::invoke(&instr, &[])?;
 
@@ -42,4 +38,3 @@ fn do_callee_mode() -> ProgramResult {
 
     Ok(())
 }
-

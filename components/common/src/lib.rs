@@ -1,4 +1,3 @@
-use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
@@ -38,7 +37,7 @@ pub enum PrintSysvarsSection {
 }
 
 impl PrintSysvarsInstruction {
-    pub fn build_instruction(self, program_id: &Pubkey) -> Result<Instruction> {
+    pub fn build_instruction(self, program_id: &Pubkey) -> Instruction {
         let instr = CustomInstruction::PrintSysvars(self);
         let accounts = vec![
             AccountMeta::new_readonly(system_program::ID, false),
@@ -51,7 +50,7 @@ impl PrintSysvarsInstruction {
             AccountMeta::new_readonly(sysvar::stake_history::ID, false),
         ];
 
-        Ok(Instruction::new_with_borsh(*program_id, &instr, accounts))
+        Instruction::new_with_borsh(*program_id, &instr, accounts)
     }
 }
 
@@ -65,11 +64,11 @@ pub struct DemoSecp256k1VerifyBasicInstruction {
 }
 
 impl DemoSecp256k1VerifyBasicInstruction {
-    pub fn build_instruction(self, program_id: &Pubkey) -> Result<Instruction> {
+    pub fn build_instruction(self, program_id: &Pubkey) -> Instruction {
         let instr = CustomInstruction::DemoSecp256k1VerifyBasic(self);
         let accounts = vec![AccountMeta::new_readonly(sysvar::instructions::ID, false)];
 
-        Ok(Instruction::new_with_borsh(*program_id, &instr, accounts))
+        Instruction::new_with_borsh(*program_id, &instr, accounts)
     }
 }
 
@@ -85,11 +84,11 @@ pub struct DemoSecp256k1RecoverInstruction {
 }
 
 impl DemoSecp256k1RecoverInstruction {
-    pub fn build_instruction(self, program_id: &Pubkey) -> Result<Instruction> {
+    pub fn build_instruction(self, program_id: &Pubkey) -> Instruction {
         let instr = CustomInstruction::DemoSecp256k1Recover(self);
         let accounts = vec![];
 
-        Ok(Instruction::new_with_borsh(*program_id, &instr, accounts))
+        Instruction::new_with_borsh(*program_id, &instr, accounts)
     }
 }
 
@@ -101,10 +100,10 @@ pub struct DemoInvokeInstruction {
 }
 
 impl DemoInvokeInstruction {
-    pub fn build_instruction(self, program_id: &Pubkey) -> Result<Instruction> {
+    pub fn build_instruction(self, program_id: &Pubkey) -> Instruction {
         let instr = CustomInstruction::DemoInvoke(self);
         let accounts = vec![];
 
-        Ok(Instruction::new_with_borsh(*program_id, &instr, accounts))
+        Instruction::new_with_borsh(*program_id, &instr, accounts)
     }
 }

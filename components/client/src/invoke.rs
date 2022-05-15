@@ -13,7 +13,7 @@ pub fn demo_invoke(
 ) -> Result<()> {
 
     let instr = DemoInvokeInstruction {
-    }.build_instruction(&program_keypair.pubkey())?;
+    }.build_instruction(&program_keypair.pubkey());
 
     let blockhash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(

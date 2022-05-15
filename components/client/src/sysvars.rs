@@ -20,7 +20,7 @@ pub fn print_sysvars_via_program(
 
     for section in sections {
         let instr =
-            PrintSysvarsInstruction { section }.build_instruction(&program_keypair.pubkey())?;
+            PrintSysvarsInstruction { section }.build_instruction(&program_keypair.pubkey());
 
         let blockhash = client.get_latest_blockhash()?;
         let tx = Transaction::new_signed_with_payer(

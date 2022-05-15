@@ -27,7 +27,7 @@ pub fn demo_secp256k1_verify_basic(
         message: msg.to_vec(),
         signer_pubkey: public_key,
     }
-    .build_instruction(&program_keypair.pubkey())?;
+    .build_instruction(&program_keypair.pubkey());
 
     let blockhash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(
@@ -79,7 +79,7 @@ pub fn demo_secp256k1_recover(
         recovery_id: recovery_id.serialize(),
         expected_signer_pubkey: public_key_bytes,
     }
-    .build_instruction(&program_keypair.pubkey())?;
+    .build_instruction(&program_keypair.pubkey());
 
     let blockhash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(

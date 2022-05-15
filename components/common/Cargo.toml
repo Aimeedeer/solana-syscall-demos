@@ -9,4 +9,3 @@ edition = "2021"
 solana-program = "1.10.9"
 borsh = "0.9.3"
 borsh-derive = "0.9.3"
-anyhow = { version = "1.0.57", default-features = false }

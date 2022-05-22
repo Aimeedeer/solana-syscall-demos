@@ -24,7 +24,6 @@ pub fn demo_secp256k1_verify_basic(
     let public_key = libsecp256k1::PublicKey::from_secret_key(&secret_key);
     let public_key = secp256k1_instruction::construct_eth_pubkey(&public_key);
     let program_instr = DemoSecp256k1VerifyBasicInstruction {
-        message: msg.to_vec(),
         signer_pubkey: public_key,
     }
     .build_instruction(&program_keypair.pubkey());

@@ -91,12 +91,12 @@ pub fn demo_secp256k1_recover(
     instruction: DemoSecp256k1RecoverInstruction,
     _accounts: &[AccountInfo],
 ) -> ProgramResult {
-    /// The secp256k1 recovery operation accepts a cryptographically-hashed
-    /// message only. Passing it anything else is insecure and allows signatures
-    /// to be forged.
-    ///
-    /// In real cases the program may not have access to the original message,
-    /// only the hash.
+    // The secp256k1 recovery operation accepts a cryptographically-hashed
+    // message only. Passing it anything else is insecure and allows signatures
+    // to be forged.
+    //
+    // In real cases the program may not have access to the original message,
+    // only the hash.
     let message_hash = {
         let mut hasher = keccak::Hasher::default();
         hasher.hash(&instruction.message);

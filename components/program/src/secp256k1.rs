@@ -49,6 +49,7 @@ pub fn demo_secp256k1_verify_basic(
         sysvar::instructions::load_instruction_at_checked(0, instructions_sysvar_account)?;
 
     // Verify it is a secp256k1 instruction.
+    // This is security-critical - what if the transaction uses an imposter secp256k1 program?
     assert!(secp256k1_program::check_id(&secp256k1_instr.program_id));
 
     // There must be at least one byte.
@@ -68,21 +69,17 @@ pub fn demo_secp256k1_verify_basic(
     assert_eq!(0, offsets.eth_address_instruction_index);
     assert_eq!(0, offsets.message_instruction_index);
 
-    // Verify the public key we expect signed the message we expect.
-    // These are the checks that are ultimately required for a program
-    // to verify a signature.
-    //
-    // Checking these verifies that `verified_pubkey` signed `verified_message`.
+    // Verify the public key we expect signed the message. Most programs will at
+    // least need to verify the pubkey that signed the message is the same as
+    // some known pubkey. Otherwise we have only verified that some key signed
+    // some message.
+    // This is security-critical.
 
     let verified_pubkey = &secp256k1_instr.data[usize::from(offsets.eth_address_offset)
         ..usize::from(offsets.eth_address_offset)
             .saturating_add(defs::HASHED_PUBKEY_SERIALIZED_SIZE)];
-    let verified_message = &secp256k1_instr.data[usize::from(offsets.message_data_offset)
-        ..usize::from(offsets.message_data_offset)
-            .saturating_add(usize::from(offsets.message_data_size))];
 
     assert_eq!(&instruction.signer_pubkey[..], verified_pubkey);
-    assert_eq!(&instruction.message[..], verified_message);
 
     Ok(())
 }
@@ -91,6 +88,12 @@ pub fn demo_secp256k1_recover(
     instruction: DemoSecp256k1RecoverInstruction,
     _accounts: &[AccountInfo],
 ) -> ProgramResult {
+    // The secp256k1 recovery operation accepts a cryptographically-hashed
+    // message only. Passing it anything else is insecure and allows signatures
+    // to be forged.
+    //
+    // In real cases the program may not have access to the original message,
+    // only the hash.
     let message_hash = {
         let mut hasher = keccak::Hasher::default();
         hasher.hash(&instruction.message);

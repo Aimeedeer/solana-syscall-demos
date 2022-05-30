@@ -30,11 +30,27 @@ fn do_caller_mode(program_id: &Pubkey) -> ProgramResult {
 
     program::invoke(&instr, &[])?;
 
+    let return_data = program::get_return_data();
+
+    if let Some((return_data_pubkey, return_data)) = return_data {
+        msg!(
+            "return data: ({}, {:?})",
+            return_data_pubkey,
+            std::str::from_utf8(&return_data)
+        );
+        assert_eq!(&return_data_pubkey, program_id);
+        assert_eq!(return_data, b"hello world");
+    } else {
+        panic!("expected return data");
+    }
+
     Ok(())
 }
 
 fn do_callee_mode() -> ProgramResult {
     msg!("invoke callee");
+
+    program::set_return_data(b"hello world");
 
     Ok(())
 }

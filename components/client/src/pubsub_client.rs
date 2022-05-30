@@ -2,26 +2,33 @@ use anyhow::Result;
 use solana_client::{
     pubsub_client::PubsubClient,
     rpc_client::RpcClient,
-    rpc_config::{RpcAccountInfoConfig, RpcBlockSubscribeConfig, RpcBlockSubscribeFilter, RpcProgramAccountsConfig, RpcTransactionLogsConfig, RpcTransactionLogsFilter, RpcSignatureSubscribeConfig},
+    rpc_config::{
+        RpcAccountInfoConfig, RpcBlockSubscribeConfig, RpcBlockSubscribeFilter,
+        RpcProgramAccountsConfig, RpcSignatureSubscribeConfig, RpcTransactionLogsConfig,
+        RpcTransactionLogsFilter,
+    },
 };
 use solana_sdk::{
     commitment_config::{CommitmentConfig, CommitmentLevel},
     hash::Hash,
+    pubkey::Pubkey,
     rpc_port,
     signature::{Keypair, Signer},
-    system_transaction,
-    pubkey::Pubkey,
-    system_program,
+    system_program, system_transaction,
 };
 use solana_transaction_status::{
     BlockEncodingOptions, ConfirmedBlock, TransactionDetails, UiTransactionEncoding,
     VersionedConfirmedBlock,
 };
-use std::time::Duration;
 use std::thread;
+use std::time::Duration;
 
-pub fn demo_pubsub_client(config: &crate::util::Config, rpc_client: &RpcClient, program_keypair: &Keypair) -> Result<()> {
-//    let ws_url = "wss://api.devnet.solana.com/";
+pub fn demo_pubsub_client(
+    config: &crate::util::Config,
+    rpc_client: &RpcClient,
+    program_keypair: &Keypair,
+) -> Result<()> {
+    //    let ws_url = "wss://api.devnet.solana.com/";
     let ws_url = &format!("ws://127.0.0.1:{}/", rpc_port::DEFAULT_RPC_PUBSUB_PORT);
 
     println!("-------------------- account subscription --------------------");
@@ -31,18 +38,12 @@ pub fn demo_pubsub_client(config: &crate::util::Config, rpc_client: &RpcClient, 
         data_slice: None,
     });
 
-    let (account_subscription_client, account_subscription_receiver) = PubsubClient::account_subscribe(
-        ws_url,
-        &config.keypair.pubkey(),
-        rpc_config.clone(),
-    )?;
+    let (account_subscription_client, account_subscription_receiver) =
+        PubsubClient::account_subscribe(ws_url, &config.keypair.pubkey(), rpc_config.clone())?;
 
     let alice = Keypair::new();
-    let (account_subscription_client_for_alice, account_subscription_receiver_for_alice) = PubsubClient::account_subscribe(
-        ws_url,
-        &alice.pubkey(),
-        rpc_config,
-    )?;
+    let (account_subscription_client_for_alice, account_subscription_receiver_for_alice) =
+        PubsubClient::account_subscribe(ws_url, &alice.pubkey(), rpc_config)?;
 
     // send a tx for testing
     let blockhash = rpc_client.get_latest_blockhash()?;
@@ -50,87 +51,80 @@ pub fn demo_pubsub_client(config: &crate::util::Config, rpc_client: &RpcClient, 
     let sig = rpc_client.send_and_confirm_transaction(&tx)?;
     println!("transfer sig: {}", sig);
 
-    thread::spawn(move || {
-        loop {
-            match account_subscription_receiver.recv() {
-                Ok(response) => {
-                    println!("account subscription response: {:?}", response);
-                }
-                Err(e) => {
-                    println!("account subscription error: {:?}", e);
-                    break;
-                }
+    thread::spawn(move || loop {
+        match account_subscription_receiver.recv() {
+            Ok(response) => {
+                println!("account subscription response: {:?}", response);
+            }
+            Err(e) => {
+                println!("account subscription error: {:?}", e);
+                break;
             }
         }
     });
 
-    thread::spawn(move || {
-        loop {
-            match account_subscription_receiver_for_alice.recv() {
-                Ok(response) => {
-                    println!("account subscription for alice response: {:?}", response);
-                }
-                Err(e) => {
-                    println!("account subscription for alice error: {:?}", e);
-                    break;
-                }
+    thread::spawn(move || loop {
+        match account_subscription_receiver_for_alice.recv() {
+            Ok(response) => {
+                println!("account subscription for alice response: {:?}", response);
+            }
+            Err(e) => {
+                println!("account subscription for alice error: {:?}", e);
+                break;
             }
         }
     });
-    
+
     println!("-------------------- slot subscription --------------------");
-    let (slot_subscription_client, slot_subscription_receiver) = PubsubClient::slot_subscribe(ws_url)?;
+    let (slot_subscription_client, slot_subscription_receiver) =
+        PubsubClient::slot_subscribe(ws_url)?;
 
-    thread::spawn(move || {
-        loop {
-            match slot_subscription_receiver.recv() {
-                Ok(result) => {
-                    println!("slot subscription result: {:?}", result);
-                }
-                Err(e) => {
-                    println!("slot subscription error: {:?}", e);
-                    break;
-                }
+    thread::spawn(move || loop {
+        match slot_subscription_receiver.recv() {
+            Ok(result) => {
+                println!("slot subscription result: {:?}", result);
+            }
+            Err(e) => {
+                println!("slot subscription error: {:?}", e);
+                break;
             }
         }
     });
-    
-    println!("-------------------- root subscription --------------------");
-    let (root_subscription_client, root_subscription_receiver) = PubsubClient::root_subscribe(ws_url)?;
 
-    thread::spawn(move || {
-        loop {
-            match root_subscription_receiver.recv() {
-                Ok(result) => {
-                    println!("root subscription result: {:?}", result);
-                }
-                Err(e) => {
-                    println!("root subscription error: {:?}", e);
-                    break;
-                }
+    println!("-------------------- root subscription --------------------");
+    let (root_subscription_client, root_subscription_receiver) =
+        PubsubClient::root_subscribe(ws_url)?;
+
+    thread::spawn(move || loop {
+        match root_subscription_receiver.recv() {
+            Ok(result) => {
+                println!("root subscription result: {:?}", result);
+            }
+            Err(e) => {
+                println!("root subscription error: {:?}", e);
+                break;
             }
         }
     });
 
     println!("-------------------- program subscription --------------------");
-    let (program_subscription_client, program_subscription_receiver) = PubsubClient::program_subscribe(
-        ws_url,
-        &system_program::ID,
-        Some(RpcProgramAccountsConfig {
-            ..RpcProgramAccountsConfig::default()
-        }),
-    )?;
+    let (program_subscription_client, program_subscription_receiver) =
+        PubsubClient::program_subscribe(
+            ws_url,
+            &system_program::ID,
+            Some(RpcProgramAccountsConfig {
+                ..RpcProgramAccountsConfig::default()
+            }),
+        )?;
 
-    thread::spawn(move || {
-        loop {
-            match program_subscription_receiver.recv() {
-                Ok(response) => {
-                    println!("program subscription response: {:?}", response);
-                }
-                Err(e) => {
-                    println!("program subscription error: {:?}", e);
-                    break;
-                }
+    thread::spawn(move || loop {
+        match program_subscription_receiver.recv() {
+            Ok(response) => {
+                println!("program subscription response: {:?}", response);
+            }
+            Err(e) => {
+                println!("program subscription error: {:?}", e);
+                break;
             }
         }
     });
@@ -146,33 +140,31 @@ pub fn demo_pubsub_client(config: &crate::util::Config, rpc_client: &RpcClient, 
         },
     )?;
 
-    thread::spawn(move || {
-        loop {
-            match logs_subscription_receiver.recv() {
-                Ok(logs) => {
-                    println!("---------- logs subscription result ----------");
-                    println!("Transaction executed in slot {}:", logs.context.slot);
-                    println!("  Signature: {}", logs.value.signature);
-                    println!(
-                        "  Status: {}",
-                        logs.value
-                            .err
-                            .map(|err| err.to_string())
-                            .unwrap_or_else(|| "Ok".to_string())
-                    );
-                    println!("  Log Messages:");
-                    for log in logs.value.logs {
-                        println!("    {}", log);
-                    }
+    thread::spawn(move || loop {
+        match logs_subscription_receiver.recv() {
+            Ok(logs) => {
+                println!("---------- logs subscription result ----------");
+                println!("Transaction executed in slot {}:", logs.context.slot);
+                println!("  Signature: {}", logs.value.signature);
+                println!(
+                    "  Status: {}",
+                    logs.value
+                        .err
+                        .map(|err| err.to_string())
+                        .unwrap_or_else(|| "Ok".to_string())
+                );
+                println!("  Log Messages:");
+                for log in logs.value.logs {
+                    println!("    {}", log);
                 }
-                Err(e) => {
-                    println!("log subscription error: {:?}", e);
-                    break;
-                }
+            }
+            Err(e) => {
+                println!("log subscription error: {:?}", e);
+                break;
             }
         }
     });
-    
+
     /*
     // error with block_subscription and vote_subscription:
     // Error: unexpected message format: {"error": Object({"code":
@@ -237,28 +229,27 @@ pub fn demo_pubsub_client(config: &crate::util::Config, rpc_client: &RpcClient, 
     let alice = Keypair::new();
     let blockhash = rpc_client.get_latest_blockhash()?;
     let tx = system_transaction::transfer(&config.keypair, &alice.pubkey(), 999_000, blockhash);
-    let (mut sig_subscription_client, sig_subscription_receiver) = PubsubClient::signature_subscribe(
-        ws_url,
-        &tx.signatures[0],
-        Some(RpcSignatureSubscribeConfig {
-            commitment: Some(CommitmentConfig::processed()),
-            enable_received_notification: Some(true),
-        }),
-    )?;
+    let (mut sig_subscription_client, sig_subscription_receiver) =
+        PubsubClient::signature_subscribe(
+            ws_url,
+            &tx.signatures[0],
+            Some(RpcSignatureSubscribeConfig {
+                commitment: Some(CommitmentConfig::processed()),
+                enable_received_notification: Some(true),
+            }),
+        )?;
 
     let sig = rpc_client.send_and_confirm_transaction(&tx)?;
     println!("subscribe to signature: {:?}", sig);
-    
-    thread::spawn(move || {
-        loop {
-            match sig_subscription_receiver.recv() {
-                Ok(response) => {
-                    println!("signature subscription response: {:?}", response);
-                }
-                Err(e) => {
-                    println!("signature subscription error: {:?}", e);
-                    break;
-                }
+
+    thread::spawn(move || loop {
+        match sig_subscription_receiver.recv() {
+            Ok(response) => {
+                println!("signature subscription response: {:?}", response);
+            }
+            Err(e) => {
+                println!("signature subscription error: {:?}", e);
+                break;
             }
         }
     });
@@ -275,7 +266,7 @@ pub fn demo_pubsub_client(config: &crate::util::Config, rpc_client: &RpcClient, 
 
     slot_subscription_client.send_unsubscribe();
     slot_subscription_client.shutdown();
-    
+
     root_subscription_client.send_unsubscribe();
     root_subscription_client.shutdown();
 

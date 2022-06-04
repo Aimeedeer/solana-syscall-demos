@@ -17,3 +17,4 @@ clap = { version = "3.1.12", features = ["derive"] }
 libsecp256k1 = "0.6.0"
 rand = "0.7.3"
 solana-transaction-status = "1.10.9"
+crossbeam-channel = "0.5.1"

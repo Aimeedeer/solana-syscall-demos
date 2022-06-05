@@ -5,6 +5,7 @@ use solana_sdk::signature::Signer;
 
 mod invoke;
 mod pubsub_client;
+mod pubsub_client_async;
 mod secp256k1;
 mod sysvars;
 mod util;
@@ -25,6 +26,7 @@ enum Command {
     DemoSecp256k1Recover,
     DemoInvoke,
     DemoPubsubClient,
+    DemoPubsubClientAsync,
 }
 
 fn main() -> Result<()> {
@@ -63,6 +65,9 @@ fn main() -> Result<()> {
         }
         Command::DemoPubsubClient => {
             pubsub_client::demo_pubsub_client(&config, &client, &program_keypair)?;
+        }
+        Command::DemoPubsubClientAsync => {
+            pubsub_client_async::demo_pubsub_client_async(&config, &client, &program_keypair)?;
         }
     }
 

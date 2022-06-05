@@ -69,6 +69,8 @@ pub fn demo_secp256k1_verify_basic(
     assert_eq!(0, offsets.eth_address_instruction_index);
     assert_eq!(0, offsets.message_instruction_index);
 
+    // Todo malleability check.
+
     // Verify the public key we expect signed the message. Most programs will at
     // least need to verify the pubkey that signed the message is the same as
     // some known pubkey. Otherwise we have only verified that some key signed
@@ -92,13 +94,25 @@ pub fn demo_secp256k1_recover(
     // message only. Passing it anything else is insecure and allows signatures
     // to be forged.
     //
-    // In real cases the program may not have access to the original message,
-    // only the hash.
+    // This means that the code calling secp256k1_recover must perform the hash
+    // itself, and not assume that data passed to it has been properly hashed.
     let message_hash = {
         let mut hasher = keccak::Hasher::default();
         hasher.hash(&instruction.message);
         hasher.result()
     };
+
+    // Reject high-s value signatures to prevent malleability.
+    // Solana does not do this itself.
+    {
+        let signature = libsecp256k1::Signature::parse_standard_slice(&instruction.signature)
+            .map_err(|_| ProgramError::InvalidArgument)?;
+
+        if signature.s.is_high() {
+            msg!("signature with high-s value");
+            return Err(ProgramError::InvalidArgument);
+        }
+    }
 
     let recovered_pubkey = secp256k1_recover(
         &message_hash.0,

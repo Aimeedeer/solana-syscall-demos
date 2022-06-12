@@ -27,6 +27,10 @@ enum Command {
     DemoPubsubClient,
 }
 
+fn _main() -> Result<()> {
+    secp256k1::test_libsecp256k1_malleability()
+}
+
 fn main() -> Result<()> {
     env_logger::Builder::new()
         .filter_level(log::LevelFilter::Info)

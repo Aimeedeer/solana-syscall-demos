@@ -14,6 +14,7 @@ use solana_sdk::{
     commitment_config::{CommitmentConfig, CommitmentLevel},
     hash::Hash,
     pubkey::Pubkey,
+    rent::Rent,
     rpc_port,
     signature::{Keypair, Signer},
     system_program, system_transaction,
@@ -49,7 +50,9 @@ pub fn demo_pubsub_client(
 
     // send a tx for testing
     let blockhash = rpc_client.get_latest_blockhash()?;
-    let tx = system_transaction::transfer(&config.keypair, &alice.pubkey(), 999_999, blockhash);
+    let transfer_amount = Rent::default().minimum_balance(0);
+    let tx =
+        system_transaction::transfer(&config.keypair, &alice.pubkey(), transfer_amount, blockhash);
     let sig = rpc_client.send_and_confirm_transaction(&tx)?;
     println!("transfer sig: {}", sig);
 
@@ -154,7 +157,9 @@ pub fn demo_pubsub_client(
     println!("-------------------- signature subscription --------------------");
     let alice = Keypair::new();
     let blockhash = rpc_client.get_latest_blockhash()?;
-    let tx = system_transaction::transfer(&config.keypair, &alice.pubkey(), 999_000, blockhash);
+    let transfer_amount = Rent::default().minimum_balance(0);
+    let tx =
+        system_transaction::transfer(&config.keypair, &alice.pubkey(), transfer_amount, blockhash);
     let (mut sig_subscription_client, sig_subscription_receiver) =
         PubsubClient::signature_subscribe(
             ws_url,

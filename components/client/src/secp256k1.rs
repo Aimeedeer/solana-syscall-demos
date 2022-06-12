@@ -62,6 +62,12 @@ pub fn demo_secp256k1_recover(
 
     let secp_message = libsecp256k1::Message::parse(&message_hash.0);
     let (signature, recovery_id) = libsecp256k1::sign(&secp_message, &secret_key);
+
+    // Create a high-s value signature
+    //let mut signature = signature;
+    //signature.s = -signature.s;
+    //let recovery_id = libsecp256k1::RecoveryId::parse(recovery_id.serialize() ^ 1)?;
+    
     let signature = signature.serialize();
 
     assert_eq!(
@@ -93,3 +99,59 @@ pub fn demo_secp256k1_recover(
 
     Ok(())
 }
+
+/*fn main() -> Result<()> {
+    use solana_sdk::keccak;
+
+    let secret_key = libsecp256k1::SecretKey::random(&mut rand::thread_rng());
+    let public_key = libsecp256k1::PublicKey::from_secret_key(&secret_key);
+
+    let message = b"hello world";
+    let message_hash = {
+        let mut hasher = keccak::Hasher::default();
+        hasher.hash(message);
+        hasher.result()
+    };
+
+    let secp_message = libsecp256k1::Message::parse(&message_hash.0);
+    let (signature, recovery_id) = libsecp256k1::sign(&secp_message, &secret_key);
+
+    let signature = signature.serialize();
+    let signature = libsecp256k1::Signature::parse_standard_slice(&signature)?;
+
+    println!("sig: {:?}", signature);
+    println!("recid: {:?}", recovery_id);
+
+    let recovered_key = libsecp256k1::recover(&secp_message, &signature, &recovery_id)?;
+
+    println!("{:?}", public_key);
+    println!("{:?}", recovered_key);
+    assert_eq!(public_key, recovered_key);
+
+    let verified = libsecp256k1::verify(&secp_message, &signature, &public_key);
+    println!("verified: {}", verified);
+
+    println!("---");
+
+    let mut signature = signature;
+    signature.s = -signature.s;
+    let recovery_id = libsecp256k1::RecoveryId::parse(recovery_id.serialize() ^ 1)?;
+
+    let signature = signature.serialize();
+    let signature = libsecp256k1::Signature::parse_standard_slice(&signature)?;
+
+    println!("sig: {:?}", signature);
+    println!("recid: {:?}", recovery_id);
+
+    let recovered_key = libsecp256k1::recover(&secp_message, &signature, &recovery_id)?;
+
+    println!("{:?}", public_key);
+    println!("{:?}", recovered_key);
+    assert_eq!(public_key, recovered_key);
+
+    let verified = libsecp256k1::verify(&secp_message, &signature, &public_key);
+    println!("verified: {}", verified);
+
+    Ok(())
+}
+*/

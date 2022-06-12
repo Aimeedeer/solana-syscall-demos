@@ -119,8 +119,8 @@ pub fn test_libsecp256k1_malleability() -> Result<()> {
     let signature = signature.serialize();
     let signature = libsecp256k1::Signature::parse_standard_slice(&signature)?;
 
-    println!("pubser: {:?}", public_key.serialize());
-    println!("sigser: {:?}", signature.serialize());
+    println!("pubser: {:#04X?}", public_key.serialize());
+    println!("sigser: {:#04X?}", signature.serialize());
 
     println!("sig: {:?}", signature);
     println!("recid: {:?}", recovery_id);

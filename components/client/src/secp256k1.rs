@@ -7,13 +7,24 @@ use solana_sdk::{
     transaction::Transaction,
 };
 
+/// The key we'll sign secp256k1 transactions with,
+/// and our program will verify.
+/// The corresponding pubkey is in the program source.
+const AUTHORIZED_SECRET_KEY: [u8; 32] = [
+    0x1E, 0xC2, 0xD4, 0x0F, 0x18, 0x08, 0xD7, 0xE7,
+    0xA3, 0x23, 0x1B, 0xD8, 0x14, 0x7F, 0x24, 0x66,
+    0x6B, 0xBB, 0xD3, 0xA1, 0xA2, 0xCF, 0x39, 0xF3,
+    0x97, 0xF3, 0x05, 0x15, 0xAB, 0x13, 0xCC, 0xC6,
+];
+
 /// Basic secp256k1 signature verification using `new_secp256k1_instruction`.
 pub fn demo_secp256k1_verify_basic(
     config: &crate::util::Config,
     client: &RpcClient,
     program_keypair: &Keypair,
 ) -> Result<()> {
-    let secret_key = libsecp256k1::SecretKey::random(&mut rand::thread_rng());
+    //let secret_key = libsecp256k1::SecretKey::random(&mut rand::thread_rng());
+    let secret_key = libsecp256k1::SecretKey::parse(&AUTHORIZED_SECRET_KEY)?;
 
     // Internally to `new_secp256k1_instruction` and
     // `secp256k_instruction::verify` (the secp256k1 program), this message is

@@ -13,9 +13,10 @@ mod secp256k1_defs {
     use std::iter::Iterator;
 
     pub const HASHED_PUBKEY_SERIALIZED_SIZE: usize = 20;
+    pub const SIGNATURE_SERIALIZED_SIZE: usize = 64;
+    pub const SIGNATURE_OFFSETS_SERIALIZED_SIZE: usize = 11;
 
     pub fn iter_signature_offsets(secp256k1_instr_data: &[u8]) -> Result<impl Iterator<Item = SecpSignatureOffsets> + '_, ProgramError> {
-        const SIGNATURE_OFFSETS_SERIALIZED_SIZE: usize = 11;
 
         let num_structs = *secp256k1_instr_data.get(0).ok_or(ProgramError::InvalidArgument)?;
         let all_structs_size = SIGNATURE_OFFSETS_SERIALIZED_SIZE * num_structs as usize;
@@ -89,7 +90,20 @@ pub fn demo_secp256k1_verify_basic(
     assert_eq!(0, offsets.eth_address_instruction_index);
     assert_eq!(0, offsets.message_instruction_index);
 
-    // Todo malleability check.
+    // Reject high-s value signatures to prevent malleability.
+    // Solana does not do this itself.
+    // This may or may not be necessary depending on use case.
+    {
+        let signature = &secp256k1_instr.data[offsets.signature_offset as usize..
+                                              offsets.signature_offset as usize + secp256k1_defs::SIGNATURE_SERIALIZED_SIZE];
+        let signature = libsecp256k1::Signature::parse_standard_slice(signature)
+            .map_err(|_| ProgramError::InvalidArgument)?;
+
+        if signature.s.is_high() {
+            msg!("signature with high-s value");
+            return Err(ProgramError::InvalidArgument);
+        }
+    }
 
     // Verify the public key we expect signed the message. Most programs will at
     // least need to verify the pubkey that signed the message is the same as
@@ -124,6 +138,7 @@ pub fn demo_secp256k1_recover(
 
     // Reject high-s value signatures to prevent malleability.
     // Solana does not do this itself.
+    // This may or may not be necessary depending on use case.
     {
         let signature = libsecp256k1::Signature::parse_standard_slice(&instruction.signature)
             .map_err(|_| ProgramError::InvalidArgument)?;

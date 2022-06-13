@@ -28,17 +28,37 @@ pub fn demo_pubsub_client_async(
     let rt = Runtime::new()?;
 
     rt.block_on(async move {
-        let (account_sender, mut account_receiver) = unbounded_channel::<Response<UiAccount>>();
+        // Track when subscriptions are ready
+        let (ready_sender, mut ready_receiver) = unbounded_channel::<()>();
+
         let (slot_sender, mut slot_receiver) = unbounded_channel::<SlotInfo>();
+        let (account_sender, mut account_receiver) = unbounded_channel::<Response<UiAccount>>();
 
         let ws_url = &format!("ws://127.0.0.1:{}/", rpc_port::DEFAULT_RPC_PUBSUB_PORT);
         // let ws_url = "wss://api.devnet.solana.com/";
 
+        let config_pubkey = config_keypair.pubkey();
         let pubsub_client = Arc::new(PubsubClient::new(ws_url).await.unwrap());
 
-        let config_pubkey = config_keypair.pubkey();
+        tokio::spawn({
+            let ready_sender = ready_sender.clone();
+            let _pubsub_client = Arc::clone(&pubsub_client);
+            async move {
+                let (mut slot_notifications, slot_unsubscribe) =
+                    _pubsub_client.slot_subscribe().await.unwrap();
+
+                ready_sender.send(()).unwrap();
+
+                while let Some(slot_info) = slot_notifications.next().await {
+                    slot_sender.send(slot_info).unwrap();
+                }
+
+                slot_unsubscribe().await;
+            }
+        });
 
         tokio::spawn({
+            let ready_sender = ready_sender.clone();
             let _pubsub_client = Arc::clone(&pubsub_client);
             async move {
                 let (mut account_notifications, account_unsubscribe) = _pubsub_client
@@ -52,6 +72,8 @@ pub fn demo_pubsub_client_async(
                     .await
                     .unwrap();
 
+                ready_sender.send(()).unwrap();
+
                 while let Some(account) = account_notifications.next().await {
                     account_sender.send(account).unwrap();
                 }
@@ -59,15 +81,11 @@ pub fn demo_pubsub_client_async(
             }
         });
 
-        tokio::spawn({
-            let _pubsub_client = Arc::clone(&pubsub_client);
-            async move {
-                let (mut slot_notifications, slot_unsubscribe) =
-                    _pubsub_client.slot_subscribe().await.unwrap();
-                while let Some(slot_info) = slot_notifications.next().await {
-                    slot_sender.send(slot_info).unwrap();
+        task::spawn(async move {
+            loop {
+                if let Some(result) = slot_receiver.recv().await {
+                    println!("slot pubsub result: {:?}", result);
                 }
-                slot_unsubscribe().await;
             }
         });
 
@@ -80,15 +98,12 @@ pub fn demo_pubsub_client_async(
         });
 
         task::spawn(async move {
-            loop {
-                if let Some(result) = slot_receiver.recv().await {
-                    println!("slot pubsub result: {:?}", result);
-                }
-            }
-        });
+            // send testing txs when subscriptions are ready
+            ready_receiver.recv().await;
+            ready_receiver.recv().await;
 
-        task::spawn_blocking(move || {
-            // Create transaction for pubsub test
+            println!("sending out testing transaction");
+
             let transfer_amount = Rent::default().minimum_balance(0);
             let recent_blockhash = rpc_client.get_latest_blockhash().unwrap();
             let transactions: Vec<Transaction> = (0..10)

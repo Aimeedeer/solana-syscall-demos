@@ -5,9 +5,8 @@ use solana_client::{
     pubsub_client::PubsubClient,
     rpc_client::RpcClient,
     rpc_config::{
-        RpcAccountInfoConfig, 
-        RpcProgramAccountsConfig, RpcSignatureSubscribeConfig, RpcTransactionLogsConfig,
-        RpcTransactionLogsFilter,
+        RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSignatureSubscribeConfig,
+        RpcTransactionLogsConfig, RpcTransactionLogsFilter,
     },
 };
 use solana_sdk::{

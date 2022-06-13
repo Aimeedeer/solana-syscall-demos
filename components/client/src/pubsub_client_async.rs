@@ -7,30 +7,19 @@ use solana_client::rpc_response::SlotInfo;
 use solana_client::{
     nonblocking::pubsub_client::PubsubClient,
     rpc_client::RpcClient,
-    rpc_config::{
-        RpcAccountInfoConfig, RpcBlockSubscribeConfig, RpcBlockSubscribeFilter,
-        RpcProgramAccountsConfig, RpcSignatureSubscribeConfig, RpcTransactionLogsConfig,
-        RpcTransactionLogsFilter,
-    },
+    rpc_config::RpcAccountInfoConfig,
 };
 use solana_sdk::{
-    commitment_config::{CommitmentConfig, CommitmentLevel},
-    hash::Hash,
-    pubkey::Pubkey,
+    commitment_config::CommitmentConfig,
     rpc_port,
     signature::{Keypair, Signer},
-    system_program, system_transaction,
+    system_transaction,
     sysvar::rent::Rent,
     transaction::Transaction,
 };
-use solana_transaction_status::{
-    BlockEncodingOptions, ConfirmedBlock, TransactionDetails, UiTransactionEncoding,
-    VersionedConfirmedBlock,
-};
 use std::sync::Arc;
-use std::thread;
-use std::time::Duration;
 use tokio::runtime::Runtime;
+use tokio::task;
 
 pub fn demo_pubsub_client_async(
     config: &crate::util::Config,
@@ -51,16 +40,23 @@ pub fn demo_pubsub_client_async(
         })
         .collect();
 
+    for tx in transactions {
+        let sig = rpc_client.send_and_confirm_transaction(&tx)?;
+        println!("transfer sig: {}", sig);
+    }
+
     let (account_sender, account_receiver) = unbounded::<Response<UiAccount>>();
     let (slot_sender, slot_receiver) = unbounded::<SlotInfo>();
 
     let rt = Runtime::new()?;
     let config_pubkey = config.keypair.pubkey();
-    rt.spawn(async move {
+
+    rt.block_on(async move {
         let ws_url = &format!("ws://127.0.0.1:{}/", rpc_port::DEFAULT_RPC_PUBSUB_PORT);
         // let ws_url = "wss://api.devnet.solana.com/";
 
         let pubsub_client = Arc::new(PubsubClient::new(ws_url).await.unwrap());
+
         tokio::spawn({
             let _pubsub_client = Arc::clone(&pubsub_client);
             async move {
@@ -93,32 +89,38 @@ pub fn demo_pubsub_client_async(
                 slot_unsubscribe().await;
             }
         });
+
+        println!("-------------------- pubsub client async receiver --------------------");
+        task::spawn_blocking(move || loop {
+            match account_receiver.recv() {
+                Ok(result) => {
+                    println!("account pubsub result: {:?}", result);
+                }
+                Err(e) => {
+                    println!("account pubsub error: {:?}", e);
+                    break;
+                }
+            }
+        });
+/*
+        task::spawn_blocking(move || loop {
+            match slot_receiver.recv() {
+                Ok(result) => {
+                    println!("slot pubsub result: {:?}", result);
+                }
+                Err(e) => {
+                    println!("slot pubsub error: {:?}", e);
+                    break;
+                }
+            }
+        });
+*/
+        loop {
+            tokio::task::yield_now(); 
+        }
+        
     });
 
-    println!("-------------------- pubsub client async receiver --------------------");
-    thread::spawn(move || loop {
-        match account_receiver.recv() {
-            Ok(result) => {
-                println!("account pubsub result: {:?}", result);
-            }
-            Err(e) => {
-                println!("account pubsub error: {:?}", e);
-                break;
-            }
-        }
-    });
-
-    thread::spawn(move || loop {
-        match slot_receiver.recv() {
-            Ok(result) => {
-                println!("slot pubsub result: {:?}", result);
-            }
-            Err(e) => {
-                println!("slot pubsub error: {:?}", e);
-                break;
-            }
-        }
-    });
 
     Ok(())
 }

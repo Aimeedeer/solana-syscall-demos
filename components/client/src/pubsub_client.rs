@@ -5,26 +5,19 @@ use solana_client::{
     pubsub_client::PubsubClient,
     rpc_client::RpcClient,
     rpc_config::{
-        RpcAccountInfoConfig, RpcBlockSubscribeConfig, RpcBlockSubscribeFilter,
+        RpcAccountInfoConfig, 
         RpcProgramAccountsConfig, RpcSignatureSubscribeConfig, RpcTransactionLogsConfig,
         RpcTransactionLogsFilter,
     },
 };
 use solana_sdk::{
     commitment_config::{CommitmentConfig, CommitmentLevel},
-    hash::Hash,
-    pubkey::Pubkey,
     rent::Rent,
     rpc_port,
     signature::{Keypair, Signer},
     system_program, system_transaction,
 };
-use solana_transaction_status::{
-    BlockEncodingOptions, ConfirmedBlock, TransactionDetails, UiTransactionEncoding,
-    VersionedConfirmedBlock,
-};
 use std::thread;
-use std::time::Duration;
 
 pub fn demo_pubsub_client(
     config: &crate::util::Config,
@@ -289,7 +282,9 @@ pub fn demo_pubsub_client(
         vote_subscription_client.shutdown();
     */
 
-    loop {}
+    loop {
+        thread::yield_now();
+    }
 
     println!("-------------------- clients unsubscribe and shutdown --------------------");
 

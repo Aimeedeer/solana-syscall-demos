@@ -67,7 +67,7 @@ pub fn demo_secp256k1_recover(
     //let mut signature = signature;
     //signature.s = -signature.s;
     //let recovery_id = libsecp256k1::RecoveryId::parse(recovery_id.serialize() ^ 1)?;
-    
+
     let signature = signature.serialize();
 
     assert_eq!(
@@ -100,7 +100,7 @@ pub fn demo_secp256k1_recover(
     Ok(())
 }
 
-/*fn main() -> Result<()> {
+pub fn test_libsecp256k1_malleability() -> Result<()> {
     use solana_sdk::keccak;
 
     let secret_key = libsecp256k1::SecretKey::random(&mut rand::thread_rng());
@@ -118,6 +118,9 @@ pub fn demo_secp256k1_recover(
 
     let signature = signature.serialize();
     let signature = libsecp256k1::Signature::parse_standard_slice(&signature)?;
+
+    println!("pubser: {:#04X?}", public_key.serialize());
+    println!("sigser: {:#04X?}", signature.serialize());
 
     println!("sig: {:?}", signature);
     println!("recid: {:?}", recovery_id);
@@ -154,4 +157,3 @@ pub fn demo_secp256k1_recover(
 
     Ok(())
 }
-*/

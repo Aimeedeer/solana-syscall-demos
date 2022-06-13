@@ -8,22 +8,49 @@ use solana_program::{
 };
 
 /// Definitions copied from solana-sdk
-mod defs {
-    use serde_derive::Deserialize;
+mod secp256k1_defs {
+    use solana_program::program_error::ProgramError;
+    use std::iter::Iterator;
 
     pub const HASHED_PUBKEY_SERIALIZED_SIZE: usize = 20;
-    //const SIGNATURE_SERIALIZED_SIZE: usize = 64;
+    pub const SIGNATURE_SERIALIZED_SIZE: usize = 64;
     pub const SIGNATURE_OFFSETS_SERIALIZED_SIZE: usize = 11;
 
-    #[allow(unused)]
-    #[derive(Deserialize)]
+    pub fn iter_signature_offsets(
+        secp256k1_instr_data: &[u8],
+    ) -> Result<impl Iterator<Item = SecpSignatureOffsets> + '_, ProgramError> {
+        let num_structs = *secp256k1_instr_data
+            .get(0)
+            .ok_or(ProgramError::InvalidArgument)?;
+        let all_structs_size = SIGNATURE_OFFSETS_SERIALIZED_SIZE * num_structs as usize;
+        let all_structs_slice = secp256k1_instr_data
+            .get(1..all_structs_size + 1)
+            .ok_or(ProgramError::InvalidArgument)?;
+
+        fn decode_u16(chunk: &[u8], index: usize) -> u16 {
+            u16::from_le_bytes(<[u8; 2]>::try_from(&chunk[index..index + 2]).unwrap())
+        }
+
+        Ok(all_structs_slice
+            .chunks(SIGNATURE_OFFSETS_SERIALIZED_SIZE)
+            .map(|chunk| SecpSignatureOffsets {
+                signature_offset: decode_u16(chunk, 0),
+                signature_instruction_index: chunk[2],
+                eth_address_offset: decode_u16(chunk, 3),
+                eth_address_instruction_index: chunk[5],
+                message_data_offset: decode_u16(chunk, 6),
+                message_data_size: decode_u16(chunk, 8),
+                message_instruction_index: chunk[10],
+            }))
+    }
+
     pub struct SecpSignatureOffsets {
-        pub signature_offset: u16, // offset to [signature,recovery_id] of 64+1 bytes
+        pub signature_offset: u16,
         pub signature_instruction_index: u8,
-        pub eth_address_offset: u16, // offset to eth_address of 20 bytes
+        pub eth_address_offset: u16,
         pub eth_address_instruction_index: u8,
-        pub message_data_offset: u16, // offset to start of message data
-        pub message_data_size: u16,   // size of message data
+        pub message_data_offset: u16,
+        pub message_data_size: u16,
         pub message_instruction_index: u8,
     }
 }
@@ -59,17 +86,30 @@ pub fn demo_secp256k1_verify_basic(
     // `new_secp256k1_instruction` generates an instruction that contains one signature.
     assert_eq!(1, num_signatures);
 
-    let offsets_slice = &secp256k1_instr.data[1..defs::SIGNATURE_OFFSETS_SERIALIZED_SIZE + 1];
-
-    let offsets: defs::SecpSignatureOffsets =
-        bincode::deserialize(offsets_slice).expect("deserialize");
+    let offsets: secp256k1_defs::SecpSignatureOffsets =
+        secp256k1_defs::iter_signature_offsets(&secp256k1_instr.data)?
+            .next()
+            .expect("offsets");
 
     // `new_secp256k1_instruction` generates an instruction that only uses instruction index 0.
     assert_eq!(0, offsets.signature_instruction_index);
     assert_eq!(0, offsets.eth_address_instruction_index);
     assert_eq!(0, offsets.message_instruction_index);
 
-    // Todo malleability check.
+    // Reject high-s value signatures to prevent malleability.
+    // Solana does not do this itself.
+    // This may or may not be necessary depending on use case.
+    {
+        let signature = &secp256k1_instr.data[offsets.signature_offset as usize
+            ..offsets.signature_offset as usize + secp256k1_defs::SIGNATURE_SERIALIZED_SIZE];
+        let signature = libsecp256k1::Signature::parse_standard_slice(signature)
+            .map_err(|_| ProgramError::InvalidArgument)?;
+
+        if signature.s.is_high() {
+            msg!("signature with high-s value");
+            return Err(ProgramError::InvalidArgument);
+        }
+    }
 
     // Verify the public key we expect signed the message. Most programs will at
     // least need to verify the pubkey that signed the message is the same as
@@ -79,7 +119,7 @@ pub fn demo_secp256k1_verify_basic(
 
     let verified_pubkey = &secp256k1_instr.data[usize::from(offsets.eth_address_offset)
         ..usize::from(offsets.eth_address_offset)
-            .saturating_add(defs::HASHED_PUBKEY_SERIALIZED_SIZE)];
+            .saturating_add(secp256k1_defs::HASHED_PUBKEY_SERIALIZED_SIZE)];
 
     assert_eq!(&instruction.signer_pubkey[..], verified_pubkey);
 
@@ -104,6 +144,7 @@ pub fn demo_secp256k1_recover(
 
     // Reject high-s value signatures to prevent malleability.
     // Solana does not do this itself.
+    // This may or may not be necessary depending on use case.
     {
         let signature = libsecp256k1::Signature::parse_standard_slice(&instruction.signature)
             .map_err(|_| ProgramError::InvalidArgument)?;

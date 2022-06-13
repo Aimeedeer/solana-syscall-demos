@@ -27,22 +27,20 @@ mod secp256k1_defs {
             .get(1..all_structs_size + 1)
             .ok_or(ProgramError::InvalidArgument)?;
 
+        fn decode_u16(chunk: &[u8], index: usize) -> u16 {
+            u16::from_le_bytes(<[u8; 2]>::try_from(&chunk[index..index + 2]).unwrap())
+        }
+
         Ok(all_structs_slice
             .chunks(SIGNATURE_OFFSETS_SERIALIZED_SIZE)
-            .map(|chunk| {
-                fn decode_u16(chunk: &[u8], index: usize) -> u16 {
-                    u16::from_le_bytes(<[u8; 2]>::try_from(&chunk[index..index + 2]).unwrap())
-                }
-
-                SecpSignatureOffsets {
-                    signature_offset: decode_u16(chunk, 0),
-                    signature_instruction_index: chunk[2],
-                    eth_address_offset: decode_u16(chunk, 3),
-                    eth_address_instruction_index: chunk[5],
-                    message_data_offset: decode_u16(chunk, 6),
-                    message_data_size: decode_u16(chunk, 8),
-                    message_instruction_index: chunk[10],
-                }
+            .map(|chunk| SecpSignatureOffsets {
+                signature_offset: decode_u16(chunk, 0),
+                signature_instruction_index: chunk[2],
+                eth_address_offset: decode_u16(chunk, 3),
+                eth_address_instruction_index: chunk[5],
+                message_data_offset: decode_u16(chunk, 6),
+                message_data_size: decode_u16(chunk, 8),
+                message_instruction_index: chunk[10],
             }))
     }
 

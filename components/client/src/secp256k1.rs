@@ -17,14 +17,13 @@ pub fn demo_secp256k1_verify_basic(
 
     // Internally to `new_secp256k1_instruction` and
     // `secp256k_instruction::verify` (the secp256k1 program), this message is
-    // keccak-hashed before signing, as in EIP-712.
+    // keccak-hashed before signing.
     let msg = b"hello world";
     let verify_secp256k1_instr = secp256k1_instruction::new_secp256k1_instruction(&secret_key, msg);
 
     let public_key = libsecp256k1::PublicKey::from_secret_key(&secret_key);
     let public_key = secp256k1_instruction::construct_eth_pubkey(&public_key);
     let program_instr = DemoSecp256k1VerifyBasicInstruction {
-        signer_pubkey: public_key,
     }
     .build_instruction(&program_keypair.pubkey());
 
@@ -62,11 +61,6 @@ pub fn demo_secp256k1_recover(
 
     let secp_message = libsecp256k1::Message::parse(&message_hash.0);
     let (signature, recovery_id) = libsecp256k1::sign(&secp_message, &secret_key);
-
-    // Create a high-s value signature
-    //let mut signature = signature;
-    //signature.s = -signature.s;
-    //let recovery_id = libsecp256k1::RecoveryId::parse(recovery_id.serialize() ^ 1)?;
 
     let signature = signature.serialize();
 

@@ -16,28 +16,34 @@ mod secp256k1_defs {
     pub const SIGNATURE_SERIALIZED_SIZE: usize = 64;
     pub const SIGNATURE_OFFSETS_SERIALIZED_SIZE: usize = 11;
 
-    pub fn iter_signature_offsets(secp256k1_instr_data: &[u8]) -> Result<impl Iterator<Item = SecpSignatureOffsets> + '_, ProgramError> {
-
-        let num_structs = *secp256k1_instr_data.get(0).ok_or(ProgramError::InvalidArgument)?;
+    pub fn iter_signature_offsets(
+        secp256k1_instr_data: &[u8],
+    ) -> Result<impl Iterator<Item = SecpSignatureOffsets> + '_, ProgramError> {
+        let num_structs = *secp256k1_instr_data
+            .get(0)
+            .ok_or(ProgramError::InvalidArgument)?;
         let all_structs_size = SIGNATURE_OFFSETS_SERIALIZED_SIZE * num_structs as usize;
-        let all_structs_slice = secp256k1_instr_data.get(1..all_structs_size + 1).ok_or(ProgramError::InvalidArgument)?;
+        let all_structs_slice = secp256k1_instr_data
+            .get(1..all_structs_size + 1)
+            .ok_or(ProgramError::InvalidArgument)?;
 
-        Ok(all_structs_slice.chunks(SIGNATURE_OFFSETS_SERIALIZED_SIZE).map(|chunk| {
+        Ok(all_structs_slice
+            .chunks(SIGNATURE_OFFSETS_SERIALIZED_SIZE)
+            .map(|chunk| {
+                fn decode_u16(chunk: &[u8], index: usize) -> u16 {
+                    u16::from_le_bytes(<[u8; 2]>::try_from(&chunk[index..index + 2]).unwrap())
+                }
 
-            fn decode_u16(chunk: &[u8], index: usize) -> u16 {
-                u16::from_le_bytes(<[u8; 2]>::try_from(&chunk[index..index + 2]).unwrap())
-            }
-
-            SecpSignatureOffsets {
-                signature_offset: decode_u16(chunk, 0),
-                signature_instruction_index: chunk[2],
-                eth_address_offset: decode_u16(chunk, 3),
-                eth_address_instruction_index: chunk[5],
-                message_data_offset: decode_u16(chunk, 6),
-                message_data_size: decode_u16(chunk, 8),
-                message_instruction_index: chunk[10],
-            }
-        }))
+                SecpSignatureOffsets {
+                    signature_offset: decode_u16(chunk, 0),
+                    signature_instruction_index: chunk[2],
+                    eth_address_offset: decode_u16(chunk, 3),
+                    eth_address_instruction_index: chunk[5],
+                    message_data_offset: decode_u16(chunk, 6),
+                    message_data_size: decode_u16(chunk, 8),
+                    message_instruction_index: chunk[10],
+                }
+            }))
     }
 
     pub struct SecpSignatureOffsets {
@@ -83,7 +89,9 @@ pub fn demo_secp256k1_verify_basic(
     assert_eq!(1, num_signatures);
 
     let offsets: secp256k1_defs::SecpSignatureOffsets =
-        secp256k1_defs::iter_signature_offsets(&secp256k1_instr.data)?.next().expect("offsets");
+        secp256k1_defs::iter_signature_offsets(&secp256k1_instr.data)?
+            .next()
+            .expect("offsets");
 
     // `new_secp256k1_instruction` generates an instruction that only uses instruction index 0.
     assert_eq!(0, offsets.signature_instruction_index);
@@ -94,8 +102,8 @@ pub fn demo_secp256k1_verify_basic(
     // Solana does not do this itself.
     // This may or may not be necessary depending on use case.
     {
-        let signature = &secp256k1_instr.data[offsets.signature_offset as usize..
-                                              offsets.signature_offset as usize + secp256k1_defs::SIGNATURE_SERIALIZED_SIZE];
+        let signature = &secp256k1_instr.data[offsets.signature_offset as usize
+            ..offsets.signature_offset as usize + secp256k1_defs::SIGNATURE_SERIALIZED_SIZE];
         let signature = libsecp256k1::Signature::parse_standard_slice(signature)
             .map_err(|_| ProgramError::InvalidArgument)?;
 

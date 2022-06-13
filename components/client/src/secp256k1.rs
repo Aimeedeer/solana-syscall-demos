@@ -67,7 +67,7 @@ pub fn demo_secp256k1_recover(
     //let mut signature = signature;
     //signature.s = -signature.s;
     //let recovery_id = libsecp256k1::RecoveryId::parse(recovery_id.serialize() ^ 1)?;
-    
+
     let signature = signature.serialize();
 
     assert_eq!(

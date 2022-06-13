@@ -12,7 +12,6 @@ mod secp256k1_defs {
     use solana_program::program_error::ProgramError;
     use std::iter::Iterator;
 
-    pub const HASHED_PUBKEY_SERIALIZED_SIZE: usize = 20;
     pub const SIGNATURE_SERIALIZED_SIZE: usize = 64;
     pub const SIGNATURE_OFFSETS_SERIALIZED_SIZE: usize = 11;
 
@@ -79,7 +78,8 @@ pub fn demo_secp256k1_verify_basic(
     // This is security-critical - what if the transaction uses an imposter secp256k1 program?
     assert!(secp256k1_program::check_id(&secp256k1_instr.program_id));
 
-    // There must be at least one byte.
+    // There must be at least one byte. This is also verified by the runtime,
+    // and doesn't strictly need to be checked.
     assert!(secp256k1_instr.data.len() > 1);
 
     let num_signatures = secp256k1_instr.data[0];
@@ -111,17 +111,11 @@ pub fn demo_secp256k1_verify_basic(
         }
     }
 
-    // Verify the public key we expect signed the message. Most programs will at
-    // least need to verify the pubkey that signed the message is the same as
-    // some known pubkey. Otherwise we have only verified that some key signed
-    // some message.
-    // This is security-critical.
-
-    let verified_pubkey = &secp256k1_instr.data[usize::from(offsets.eth_address_offset)
-        ..usize::from(offsets.eth_address_offset)
-            .saturating_add(secp256k1_defs::HASHED_PUBKEY_SERIALIZED_SIZE)];
-
-    assert_eq!(&instruction.signer_pubkey[..], verified_pubkey);
+    // There is likely at least one more verification step a real program needs
+    // to do here to ensure it trusts the secp256k1 transaction, e.g.:
+    //
+    // - verify the tx signer is authorized
+    // - verify the secp256k1 signer is authorized
 
     Ok(())
 }

@@ -40,12 +40,12 @@ pub fn demo_pubsub_client_async(
         let config_pubkey = config_keypair.pubkey();
         let pubsub_client = Arc::new(PubsubClient::new(ws_url).await.unwrap());
 
-        tokio::spawn({
+        let task_slot_subscribe = tokio::spawn({
             let ready_sender = ready_sender.clone();
-            let _pubsub_client = Arc::clone(&pubsub_client);
+            let pubsub_client = Arc::clone(&pubsub_client);
             async move {
                 let (mut slot_notifications, slot_unsubscribe) =
-                    _pubsub_client.slot_subscribe().await.unwrap();
+                    pubsub_client.slot_subscribe().await.unwrap();
 
                 ready_sender.send(()).unwrap();
 
@@ -57,11 +57,11 @@ pub fn demo_pubsub_client_async(
             }
         });
 
-        tokio::spawn({
+        let task_account_subscribe = tokio::spawn({
             let ready_sender = ready_sender.clone();
-            let _pubsub_client = Arc::clone(&pubsub_client);
+            let pubsub_client = Arc::clone(&pubsub_client);
             async move {
-                let (mut account_notifications, account_unsubscribe) = _pubsub_client
+                let (mut account_notifications, account_unsubscribe) = pubsub_client
                     .account_subscribe(
                         &config_pubkey,
                         Some(RpcAccountInfoConfig {
@@ -81,7 +81,7 @@ pub fn demo_pubsub_client_async(
             }
         });
 
-        task::spawn(async move {
+        let task_slot_receiver = task::spawn(async move {
             loop {
                 if let Some(result) = slot_receiver.recv().await {
                     println!("slot pubsub result: {:?}", result);
@@ -89,7 +89,7 @@ pub fn demo_pubsub_client_async(
             }
         });
 
-        task::spawn(async move {
+        let task_account_receiver = task::spawn(async move {
             loop {
                 if let Some(result) = account_receiver.recv().await {
                     println!("account pubsub result: {:?}", result);
@@ -97,7 +97,7 @@ pub fn demo_pubsub_client_async(
             }
         });
 
-        task::spawn(async move {
+        let task_test_tx = task::spawn(async move {
             // send testing txs when subscriptions are ready
             ready_receiver.recv().await;
             ready_receiver.recv().await;
@@ -123,9 +123,17 @@ pub fn demo_pubsub_client_async(
             }
         });
 
-        loop {
-            tokio::task::yield_now();
-        }
+        task_slot_subscribe.await;
+        task_slot_receiver.await;
+
+        task_account_subscribe.await;
+        task_account_receiver.await;
+
+        task_test_tx.await;
+        
+//        loop {
+//            task::yield_now();
+//        }
     });
 
     Ok(())

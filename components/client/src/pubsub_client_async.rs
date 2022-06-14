@@ -1,18 +1,18 @@
 use anyhow::Result;
 use futures_util::StreamExt;
 use solana_account_decoder::UiAccount;
-use solana_client::rpc_response::{Response, RpcSignatureResult, SlotInfo};
+use solana_client::rpc_response::{Response, RpcKeyedAccount, RpcSignatureResult, SlotInfo};
 use solana_client::{
     nonblocking::pubsub_client::PubsubClient,
     rpc_client::RpcClient,
-    rpc_config::{RpcAccountInfoConfig, RpcSignatureSubscribeConfig},
+    rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSignatureSubscribeConfig},
 };
 use solana_sdk::{
     commitment_config::CommitmentConfig,
     rpc_port,
     signature::Signature,
     signature::{Keypair, Signer},
-    system_transaction,
+    system_program, system_transaction,
     sysvar::rent::Rent,
     transaction::Transaction,
 };
@@ -34,6 +34,8 @@ pub fn demo_pubsub_client_async(
         let (ready_sender, mut ready_receiver) = unbounded_channel::<()>();
 
         let (slot_sender, mut slot_receiver) = unbounded_channel::<SlotInfo>();
+        let (program_sender, mut program_receiver) =
+            unbounded_channel::<Response<RpcKeyedAccount>>();
         let (account_sender, mut account_receiver) = unbounded_channel::<Response<UiAccount>>();
         let (signature_sender, mut signature_receiver) =
             unbounded_channel::<(Signature, Response<RpcSignatureResult>)>();
@@ -75,6 +77,29 @@ pub fn demo_pubsub_client_async(
                 }
 
                 slot_unsubscribe().await;
+            }
+        });
+
+        let task_program_subscribe = tokio::spawn({
+            let ready_sender = ready_sender.clone();
+            let pubsub_client = Arc::clone(&pubsub_client);
+            async move {
+                let (mut program_notifications, program_unsubscribe) = pubsub_client
+                    .program_subscribe(
+                        &system_program::ID,
+                        Some(RpcProgramAccountsConfig {
+                            ..RpcProgramAccountsConfig::default()
+                        }),
+                    )
+                    .await
+                    .unwrap();
+
+                ready_sender.send(()).unwrap();
+
+                while let Some(program) = program_notifications.next().await {
+                    program_sender.send(program).unwrap();
+                }
+                program_unsubscribe().await;
             }
         });
 
@@ -141,6 +166,15 @@ pub fn demo_pubsub_client_async(
             }
         });
 
+        let task_program_receiver = task::spawn(async move {
+            loop {
+                if let Some(result) = program_receiver.recv().await {
+                    println!("------------------------------------------------------------");
+                    println!("program pubsub result: {:?}", result);
+                }
+            }
+        });
+
         let task_account_receiver = task::spawn(async move {
             loop {
                 if let Some(result) = account_receiver.recv().await {
@@ -160,10 +194,13 @@ pub fn demo_pubsub_client_async(
         });
 
         let task_test_tx = task::spawn(async move {
-            // send testing txs when subscriptions are ready
+            // send testing txs when all subscriptions are ready
+            // signals from slot, program, account subscriptions
+            ready_receiver.recv().await;
             ready_receiver.recv().await;
             ready_receiver.recv().await;
 
+            // signals from 10 test signature subscriptions
             for i in 0..10 {
                 ready_receiver.recv().await;
             }
@@ -177,6 +214,9 @@ pub fn demo_pubsub_client_async(
 
         task_slot_subscribe.await;
         task_slot_receiver.await;
+
+        task_program_subscribe.await;
+        task_program_receiver.await;
 
         task_account_subscribe.await;
         task_account_receiver.await;

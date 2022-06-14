@@ -161,7 +161,6 @@ pub fn demo_pubsub_client_async(
 
         let task_test_tx = task::spawn(async move {
             // send testing txs when subscriptions are ready
-
             ready_receiver.recv().await;
             ready_receiver.recv().await;
 
@@ -186,10 +185,6 @@ pub fn demo_pubsub_client_async(
         task_signature_receiver.await;
 
         task_test_tx.await;
-
-        //        loop {
-        //            task::yield_now();
-        //        }
     });
 
     Ok(())

@@ -49,9 +49,6 @@ pub fn demo_pubsub_client_async(
         let (signature_sender, mut signature_receiver) =
             unbounded_channel::<(Signature, Response<RpcSignatureResult>)>();
 
-        let ws_url = &format!("ws://127.0.0.1:{}/", rpc_port::DEFAULT_RPC_PUBSUB_PORT);
-        // let ws_url = "wss://api.devnet.solana.com/";
-
         // transactions for test
         let transfer_amount = Rent::default().minimum_balance(0);
         let recent_blockhash = rpc_client.get_latest_blockhash().unwrap();
@@ -69,6 +66,9 @@ pub fn demo_pubsub_client_async(
             transactions.iter().map(|tx| tx.signatures[0]).collect();
 
         let config_pubkey = config_keypair.pubkey();
+
+        // let ws_url = "wss://api.devnet.solana.com/";
+        let ws_url = &format!("ws://127.0.0.1:{}/", rpc_port::DEFAULT_RPC_PUBSUB_PORT);
         let pubsub_client = Arc::new(PubsubClient::new(ws_url).await.unwrap());
 
         let task_slot_subscribe = tokio::spawn({
@@ -349,5 +349,6 @@ pub fn demo_pubsub_client_async(
         task_test_tx.await;
     });
 
+    
     Ok(())
 }

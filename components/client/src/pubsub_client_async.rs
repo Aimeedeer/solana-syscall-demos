@@ -17,6 +17,7 @@ use solana_sdk::{
     rpc_port,
     signature::Signature,
     signature::{Keypair, Signer},
+    slot_history::Slot,
     system_program, system_transaction,
     sysvar::rent::Rent,
     transaction::Transaction,
@@ -40,6 +41,7 @@ pub fn demo_pubsub_client_async(
 
         let (slot_sender, mut slot_receiver) = unbounded_channel::<SlotInfo>();
         let (logs_sender, mut logs_receiver) = unbounded_channel::<Response<RpcLogsResponse>>();
+        let (root_sender, mut root_receiver) = unbounded_channel::<Slot>();
         let (program_sender, mut program_receiver) =
             unbounded_channel::<Response<RpcKeyedAccount>>();
         let (account_sender, mut account_receiver) = unbounded_channel::<Response<UiAccount>>();
@@ -108,6 +110,23 @@ pub fn demo_pubsub_client_async(
                 }
 
                 logs_unsubscribe().await;
+            }
+        });
+
+        let task_root_subscribe = tokio::spawn({
+            let ready_sender = ready_sender.clone();
+            let pubsub_client = Arc::clone(&pubsub_client);
+            async move {
+                let (mut root_notifications, root_unsubscribe) =
+                    pubsub_client.root_subscribe().await.unwrap();
+
+                ready_sender.send(()).unwrap();
+
+                while let Some(root) = root_notifications.next().await {
+                    root_sender.send(root).unwrap();
+                }
+
+                root_unsubscribe().await;
             }
         });
 
@@ -220,6 +239,15 @@ pub fn demo_pubsub_client_async(
             }
         });
 
+        let task_root_receiver = task::spawn(async move {
+            loop {
+                if let Some(result) = root_receiver.recv().await {
+                    println!("------------------------------------------------------------");
+                    println!("root pubsub result: {:?}", result);
+                }
+            }
+        });
+
         let task_program_receiver = task::spawn(async move {
             loop {
                 if let Some(result) = program_receiver.recv().await {
@@ -249,7 +277,8 @@ pub fn demo_pubsub_client_async(
 
         let task_test_tx = task::spawn(async move {
             // send testing txs when all subscriptions are ready
-            // signals from slot, logs, program, account subscriptions
+            // signals from slot, logs, root, program, account subscriptions
+            ready_receiver.recv().await;
             ready_receiver.recv().await;
             ready_receiver.recv().await;
             ready_receiver.recv().await;
@@ -272,6 +301,9 @@ pub fn demo_pubsub_client_async(
 
         task_logs_subscribe.await;
         task_logs_receiver.await;
+
+        task_root_subscribe.await;
+        task_root_receiver.await;
 
         task_program_subscribe.await;
         task_program_receiver.await;

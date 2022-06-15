@@ -2,14 +2,16 @@ use anyhow::Result;
 use futures_util::StreamExt;
 use solana_account_decoder::UiAccount;
 use solana_client::rpc_response::{
-    Response, RpcKeyedAccount, RpcLogsResponse, RpcSignatureResult, RpcVote, SlotInfo, SlotUpdate,
+    Response, RpcBlockUpdate, RpcKeyedAccount, RpcLogsResponse, RpcSignatureResult, RpcVote,
+    SlotInfo, SlotUpdate,
 };
 use solana_client::{
     nonblocking::pubsub_client::PubsubClient,
     rpc_client::RpcClient,
     rpc_config::{
-        RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSignatureSubscribeConfig,
-        RpcTransactionLogsConfig, RpcTransactionLogsFilter,
+        RpcAccountInfoConfig, RpcBlockSubscribeConfig, RpcBlockSubscribeFilter,
+        RpcProgramAccountsConfig, RpcSignatureSubscribeConfig, RpcTransactionLogsConfig,
+        RpcTransactionLogsFilter,
     },
 };
 use solana_sdk::{
@@ -22,6 +24,7 @@ use solana_sdk::{
     sysvar::rent::Rent,
     transaction::Transaction,
 };
+use solana_transaction_status::{TransactionDetails, UiTransactionEncoding};
 use std::collections::HashSet;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
@@ -43,6 +46,7 @@ pub fn demo_pubsub_client_async(
         let (slot_updates_sender, mut slot_updates_receiver) = unbounded_channel::<SlotUpdate>();
         let (logs_sender, mut logs_receiver) = unbounded_channel::<Response<RpcLogsResponse>>();
         let (root_sender, mut root_receiver) = unbounded_channel::<Slot>();
+        let (block_sender, mut block_receiver) = unbounded_channel::<Response<RpcBlockUpdate>>();
         let (program_sender, mut program_receiver) =
             unbounded_channel::<Response<RpcKeyedAccount>>();
         let (account_sender, mut account_receiver) = unbounded_channel::<Response<UiAccount>>();
@@ -68,8 +72,8 @@ pub fn demo_pubsub_client_async(
 
         let config_pubkey = config_keypair.pubkey();
 
-        let ws_url = "wss://api.devnet.solana.com/";
-        //let ws_url = &format!("ws://127.0.0.1:{}/", rpc_port::DEFAULT_RPC_PUBSUB_PORT);
+        // let ws_url = "wss://api.devnet.solana.com/";
+        let ws_url = &format!("ws://127.0.0.1:{}/", rpc_port::DEFAULT_RPC_PUBSUB_PORT);
         let pubsub_client = Arc::new(PubsubClient::new(ws_url).await.unwrap());
 
         let task_slot_subscribe = tokio::spawn({
@@ -149,6 +153,37 @@ pub fn demo_pubsub_client_async(
             }
         });
 
+        let task_block_subscribe = tokio::spawn({
+            let ready_sender = ready_sender.clone();
+            let pubsub_client = Arc::clone(&pubsub_client);
+            async move {
+                let (mut block_notifications, block_unsubscribe) = pubsub_client
+                    .block_subscribe(
+                        RpcBlockSubscribeFilter::All,
+                        Some(RpcBlockSubscribeConfig {
+                            commitment: Some(CommitmentConfig {
+                                commitment: CommitmentLevel::Processed, // Confirmed, Finalized
+                            }),
+                            encoding: Some(UiTransactionEncoding::Json),
+                            transaction_details: Some(TransactionDetails::Signatures),
+                            show_rewards: None,
+                            max_supported_transaction_version: None,
+                        }),
+                    )
+                    .await
+                    .unwrap();
+
+                ready_sender.send(()).unwrap();
+
+                while let Some(block) = block_notifications.next().await {
+                    block_sender.send(block).unwrap();
+                }
+
+                block_unsubscribe().await;
+            }
+        });
+
+        // don't see the result from localhost/devnet
         let task_program_subscribe = tokio::spawn({
             let ready_sender = ready_sender.clone();
             let pubsub_client = Arc::clone(&pubsub_client);
@@ -196,6 +231,7 @@ pub fn demo_pubsub_client_async(
             }
         });
 
+        // don't see the result from localhost/devnet
         let task_vote_subscribe = tokio::spawn({
             let ready_sender = ready_sender.clone();
             let pubsub_client = Arc::clone(&pubsub_client);
@@ -295,6 +331,15 @@ pub fn demo_pubsub_client_async(
             }
         });
 
+        let task_block_receiver = task::spawn(async move {
+            loop {
+                if let Some(result) = block_receiver.recv().await {
+                    println!("------------------------------------------------------------");
+                    println!("block pubsub result: {:?}", result);
+                }
+            }
+        });
+
         let task_program_receiver = task::spawn(async move {
             loop {
                 if let Some(result) = program_receiver.recv().await {
@@ -333,7 +378,7 @@ pub fn demo_pubsub_client_async(
 
         // send testing txs when all subscriptions are ready
         let task_test_tx = task::spawn(async move {
-            // signals from slot, slot_updates, logs, root, program, account, vote subscriptions
+            // signals from slot, slot_updates, logs, root, block, program, account, vote subscriptions
             ready_receiver.recv().await;
             ready_receiver.recv().await;
 
@@ -343,6 +388,7 @@ pub fn demo_pubsub_client_async(
             ready_receiver.recv().await;
             ready_receiver.recv().await;
 
+            ready_receiver.recv().await;
             ready_receiver.recv().await;
 
             // signals from 10 test signature subscriptions
@@ -368,6 +414,9 @@ pub fn demo_pubsub_client_async(
 
         task_root_subscribe.await;
         task_root_receiver.await;
+
+        task_block_subscribe.await;
+        task_block_receiver.await;
 
         task_program_subscribe.await;
         task_program_receiver.await;

@@ -2,7 +2,7 @@ use anyhow::Result;
 use futures_util::StreamExt;
 use solana_account_decoder::UiAccount;
 use solana_client::rpc_response::{
-    Response, RpcKeyedAccount, RpcLogsResponse, RpcSignatureResult, SlotInfo,
+    Response, RpcKeyedAccount, RpcLogsResponse, RpcSignatureResult, SlotInfo, SlotUpdate,
 };
 use solana_client::{
     nonblocking::pubsub_client::PubsubClient,
@@ -40,6 +40,7 @@ pub fn demo_pubsub_client_async(
         let (ready_sender, mut ready_receiver) = unbounded_channel::<()>();
 
         let (slot_sender, mut slot_receiver) = unbounded_channel::<SlotInfo>();
+        let (slot_updates_sender, mut slot_updates_receiver) = unbounded_channel::<SlotUpdate>();
         let (logs_sender, mut logs_receiver) = unbounded_channel::<Response<RpcLogsResponse>>();
         let (root_sender, mut root_receiver) = unbounded_channel::<Slot>();
         let (program_sender, mut program_receiver) =
@@ -84,6 +85,23 @@ pub fn demo_pubsub_client_async(
                 }
 
                 slot_unsubscribe().await;
+            }
+        });
+
+        let task_slot_updates_subscribe = tokio::spawn({
+            let ready_sender = ready_sender.clone();
+            let pubsub_client = Arc::clone(&pubsub_client);
+            async move {
+                let (mut slot_updates_notifications, slot_updates_unsubscribe) =
+                    pubsub_client.slot_updates_subscribe().await.unwrap();
+
+                ready_sender.send(()).unwrap();
+
+                while let Some(slot_updates) = slot_updates_notifications.next().await {
+                    slot_updates_sender.send(slot_updates).unwrap();
+                }
+
+                slot_updates_unsubscribe().await;
             }
         });
 
@@ -216,6 +234,15 @@ pub fn demo_pubsub_client_async(
             }
         });
 
+        let task_slot_updates_receiver = task::spawn(async move {
+            loop {
+                if let Some(result) = slot_updates_receiver.recv().await {
+                    println!("------------------------------------------------------------");
+                    println!("slot_updates pubsub result: {:?}", result);
+                }
+            }
+        });
+
         let task_logs_receiver = task::spawn(async move {
             loop {
                 if let Some(logs) = logs_receiver.recv().await {
@@ -277,7 +304,9 @@ pub fn demo_pubsub_client_async(
 
         let task_test_tx = task::spawn(async move {
             // send testing txs when all subscriptions are ready
-            // signals from slot, logs, root, program, account subscriptions
+            // signals from slot, slot_updates, logs, root, program, account subscriptions
+            ready_receiver.recv().await;
+            ready_receiver.recv().await;
             ready_receiver.recv().await;
             ready_receiver.recv().await;
             ready_receiver.recv().await;
@@ -298,6 +327,9 @@ pub fn demo_pubsub_client_async(
 
         task_slot_subscribe.await;
         task_slot_receiver.await;
+
+        task_slot_updates_subscribe.await;
+        task_slot_updates_receiver.await;
 
         task_logs_subscribe.await;
         task_logs_receiver.await;

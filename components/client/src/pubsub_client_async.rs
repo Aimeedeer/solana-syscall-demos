@@ -2,7 +2,7 @@ use anyhow::Result;
 use futures_util::StreamExt;
 use solana_account_decoder::UiAccount;
 use solana_client::rpc_response::{
-    Response, RpcKeyedAccount, RpcLogsResponse, RpcSignatureResult, SlotInfo, SlotUpdate,
+    Response, RpcKeyedAccount, RpcLogsResponse, RpcSignatureResult, RpcVote, SlotInfo, SlotUpdate,
 };
 use solana_client::{
     nonblocking::pubsub_client::PubsubClient,
@@ -46,6 +46,7 @@ pub fn demo_pubsub_client_async(
         let (program_sender, mut program_receiver) =
             unbounded_channel::<Response<RpcKeyedAccount>>();
         let (account_sender, mut account_receiver) = unbounded_channel::<Response<UiAccount>>();
+        let (vote_sender, mut vote_receiver) = unbounded_channel::<RpcVote>();
         let (signature_sender, mut signature_receiver) =
             unbounded_channel::<(Signature, Response<RpcSignatureResult>)>();
 
@@ -67,8 +68,8 @@ pub fn demo_pubsub_client_async(
 
         let config_pubkey = config_keypair.pubkey();
 
-        // let ws_url = "wss://api.devnet.solana.com/";
-        let ws_url = &format!("ws://127.0.0.1:{}/", rpc_port::DEFAULT_RPC_PUBSUB_PORT);
+        let ws_url = "wss://api.devnet.solana.com/";
+        //let ws_url = &format!("ws://127.0.0.1:{}/", rpc_port::DEFAULT_RPC_PUBSUB_PORT);
         let pubsub_client = Arc::new(PubsubClient::new(ws_url).await.unwrap());
 
         let task_slot_subscribe = tokio::spawn({
@@ -195,7 +196,26 @@ pub fn demo_pubsub_client_async(
             }
         });
 
+        let task_vote_subscribe = tokio::spawn({
+            let ready_sender = ready_sender.clone();
+            let pubsub_client = Arc::clone(&pubsub_client);
+            async move {
+                let (mut vote_notifications, vote_unsubscribe) =
+                    pubsub_client.vote_subscribe().await.unwrap();
+
+                ready_sender.send(()).unwrap();
+
+                while let Some(vote) = vote_notifications.next().await {
+                    vote_sender.send(vote).unwrap();
+                }
+                vote_unsubscribe().await;
+            }
+        });
+
         let task_signature_subscribe = tokio::spawn(async move {
+            let ready_sender = ready_sender.clone();
+            let pubsub_client = Arc::clone(&pubsub_client);
+
             for signature in signatures {
                 tokio::spawn({
                     let signature_sender = signature_sender.clone();
@@ -293,6 +313,15 @@ pub fn demo_pubsub_client_async(
             }
         });
 
+        let task_vote_receiver = task::spawn(async move {
+            loop {
+                if let Some(result) = vote_receiver.recv().await {
+                    println!("------------------------------------------------------------");
+                    println!("vote pubsub result: {:?}", result);
+                }
+            }
+        });
+
         let task_signature_receiver = task::spawn(async move {
             loop {
                 if let Some(result) = signature_receiver.recv().await {
@@ -302,15 +331,18 @@ pub fn demo_pubsub_client_async(
             }
         });
 
+        // send testing txs when all subscriptions are ready
         let task_test_tx = task::spawn(async move {
-            // send testing txs when all subscriptions are ready
-            // signals from slot, slot_updates, logs, root, program, account subscriptions
+            // signals from slot, slot_updates, logs, root, program, account, vote subscriptions
             ready_receiver.recv().await;
             ready_receiver.recv().await;
+
             ready_receiver.recv().await;
             ready_receiver.recv().await;
+
             ready_receiver.recv().await;
             ready_receiver.recv().await;
+
             ready_receiver.recv().await;
 
             // signals from 10 test signature subscriptions
@@ -343,12 +375,14 @@ pub fn demo_pubsub_client_async(
         task_account_subscribe.await;
         task_account_receiver.await;
 
+        task_vote_subscribe.await;
+        task_vote_receiver.await;
+
         task_signature_subscribe.await;
         task_signature_receiver.await;
 
         task_test_tx.await;
     });
 
-    
     Ok(())
 }

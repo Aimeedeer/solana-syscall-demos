@@ -83,7 +83,6 @@ pub fn demo_secp256k1_recover(
         message: message.to_vec(),
         signature,
         recovery_id: recovery_id.serialize(),
-        expected_signer_pubkey: public_key_bytes,
     }
     .build_instruction(&program_keypair.pubkey());
 

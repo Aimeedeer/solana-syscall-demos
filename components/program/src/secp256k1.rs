@@ -191,7 +191,7 @@ pub fn demo_secp256k1_recover(
     );
     msg!(
         "expected signer pubkey: {}",
-        hex::encode(instruction.expected_signer_pubkey)
+        hex::encode(AUTHORIZED_PUBLIC_KEY)
     );
 
     // If we're using this function for signature verification then we

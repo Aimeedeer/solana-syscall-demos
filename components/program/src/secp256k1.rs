@@ -82,11 +82,13 @@ pub fn demo_secp256k1_verify_basic(
 
     let account_info_iter = &mut accounts.iter();
 
+    // The instructions sysvar gives access to the instructions in the transaction.
     let instructions_sysvar_account = next_account_info(account_info_iter)?;
     assert!(sysvar::instructions::check_id(
         instructions_sysvar_account.key
     ));
 
+    // Load the secp256k1 instruction.
     // `new_secp256k1_instruction` generates an instruction that must be at index 0.
     let secp256k1_instr =
         sysvar::instructions::load_instruction_at_checked(0, instructions_sysvar_account)?;
@@ -103,10 +105,10 @@ pub fn demo_secp256k1_verify_basic(
     // `new_secp256k1_instruction` generates an instruction that contains one signature.
     assert_eq!(1, num_signatures);
 
+    // Load the first and only set of signature offsets.
     let offsets: secp256k1_defs::SecpSignatureOffsets =
         secp256k1_defs::iter_signature_offsets(&secp256k1_instr.data)?
-            .next()
-            .expect("offsets");
+            .next().ok_or(ProgramError::InvalidArgument)?;
 
     // `new_secp256k1_instruction` generates an instruction that only uses instruction index 0.
     assert_eq!(0, offsets.signature_instruction_index);
@@ -191,7 +193,12 @@ pub fn demo_secp256k1_recover(
         hex::encode(instruction.expected_signer_pubkey)
     );
 
-    assert_eq!(recovered_pubkey.0, instruction.expected_signer_pubkey);
+    // If we're using this function for signature verification then we
+    // need to check the pubkey is an expected value.
+    // Here we are checking the secp256k1 pubkey against a known authorized pubkey.
+    if recovered_pubkey.0 != AUTHORIZED_PUBLIC_KEY {
+        return Err(ProgramError::InvalidArgument);
+    }
 
     Ok(())
 }

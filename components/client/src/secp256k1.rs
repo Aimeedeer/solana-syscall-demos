@@ -21,7 +21,6 @@ pub fn demo_secp256k1_verify_basic(
     client: &RpcClient,
     program_keypair: &Keypair,
 ) -> Result<()> {
-    //let secret_key = libsecp256k1::SecretKey::random(&mut rand::thread_rng());
     let secret_key = libsecp256k1::SecretKey::parse(&AUTHORIZED_SECRET_KEY)?;
 
     // Internally to `new_secp256k1_instruction` and
@@ -57,7 +56,7 @@ pub fn demo_secp256k1_recover(
     client: &RpcClient,
     program_keypair: &Keypair,
 ) -> Result<()> {
-    let secret_key = libsecp256k1::SecretKey::random(&mut rand::thread_rng());
+    let secret_key = libsecp256k1::SecretKey::parse(&AUTHORIZED_SECRET_KEY)?;
     let public_key = libsecp256k1::PublicKey::from_secret_key(&secret_key);
 
     let message = b"hello world";

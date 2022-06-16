@@ -29,8 +29,6 @@ pub fn demo_secp256k1_verify_basic(
     let msg = b"hello world";
     let verify_secp256k1_instr = secp256k1_instruction::new_secp256k1_instruction(&secret_key, msg);
 
-    let public_key = libsecp256k1::PublicKey::from_secret_key(&secret_key);
-    let public_key = secp256k1_instruction::construct_eth_pubkey(&public_key);
     let program_instr =
         DemoSecp256k1VerifyBasicInstruction {}.build_instruction(&program_keypair.pubkey());
 
@@ -57,7 +55,6 @@ pub fn demo_secp256k1_recover(
     program_keypair: &Keypair,
 ) -> Result<()> {
     let secret_key = libsecp256k1::SecretKey::parse(&AUTHORIZED_SECRET_KEY)?;
-    let public_key = libsecp256k1::PublicKey::from_secret_key(&secret_key);
 
     let message = b"hello world";
     let message_hash = {
@@ -75,9 +72,6 @@ pub fn demo_secp256k1_recover(
         signature.len(),
         secp256k1_instruction::SIGNATURE_SERIALIZED_SIZE
     );
-
-    let mut public_key_bytes = [0; 64];
-    public_key_bytes.copy_from_slice(&public_key.serialize()[1..65]);
 
     let instr = DemoSecp256k1RecoverInstruction {
         message: message.to_vec(),
@@ -101,8 +95,6 @@ pub fn demo_secp256k1_recover(
 }
 
 pub fn test_libsecp256k1_malleability() -> Result<()> {
-    use solana_sdk::keccak;
-
     let secret_key = libsecp256k1::SecretKey::random(&mut rand::thread_rng());
     let public_key = libsecp256k1::PublicKey::from_secret_key(&secret_key);
 

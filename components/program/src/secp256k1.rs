@@ -108,7 +108,8 @@ pub fn demo_secp256k1_verify_basic(
     // Load the first and only set of signature offsets.
     let offsets: secp256k1_defs::SecpSignatureOffsets =
         secp256k1_defs::iter_signature_offsets(&secp256k1_instr.data)?
-            .next().ok_or(ProgramError::InvalidArgument)?;
+            .next()
+            .ok_or(ProgramError::InvalidArgument)?;
 
     // `new_secp256k1_instruction` generates an instruction that only uses instruction index 0.
     assert_eq!(0, offsets.signature_instruction_index);

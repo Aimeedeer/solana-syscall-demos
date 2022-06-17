@@ -1,15 +1,19 @@
-use common::{DemoSecp256k1RecoverInstruction, DemoSecp256k1VerifyBasicInstruction};
+use common::{DemoSecp256k1RecoverInstruction, DemoSecp256k1VerifyBasicInstruction, DemoSecp256k1CustomManyInstruction};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
     keccak, msg,
     program_error::ProgramError,
+    secp256k1_program,
     secp256k1_recover::secp256k1_recover,
+    sysvar,
 };
 
 /// Definitions copied from solana-sdk
 mod secp256k1_defs {
+    use solana_program::account_info::AccountInfo;
     use solana_program::program_error::ProgramError;
+    use solana_program::sysvar::instructions::load_instruction_at_checked;
     use std::iter::Iterator;
 
     pub const HASHED_PUBKEY_SERIALIZED_SIZE: usize = 20;
@@ -56,6 +60,45 @@ mod secp256k1_defs {
                 message_instruction_index: chunk[10],
             }))
     }
+
+    pub struct SecpSignature {
+        signature: [u8; SIGNATURE_SERIALIZED_SIZE],
+        eth_address: [u8; HASHED_PUBKEY_SERIALIZED_SIZE],
+        message: Vec<u8>,
+    }
+
+    /// Load all signatures indicated in the secp256k1 instruction.
+    ///
+    /// This function is quite inefficient for reloading the same instructions
+    /// repeatedly and making copies and allocations.
+    pub fn load_signatures(
+        secp256k1_instr_data: &[u8],
+        instructions_sysvar_account: &AccountInfo,
+    ) -> Result<Vec<SecpSignature>, ProgramError> {
+        let mut sigs = vec![];
+        for offsets in iter_signature_offsets(secp256k1_instr_data)? {
+            let signature_instr =
+                load_instruction_at_checked(offsets.signature_instruction_index as usize, instructions_sysvar_account)?;
+            let eth_address_instr =
+                load_instruction_at_checked(offsets.eth_address_instruction_index as usize, instructions_sysvar_account)?;
+            let message_instr =
+                load_instruction_at_checked(offsets.message_instruction_index as usize, instructions_sysvar_account)?;
+
+            // These indexes must all be valid because the runtime already verified them.
+            let signature = &signature_instr.data[offsets.signature_offset as usize..offsets.signature_offset as usize + 1];
+            let eth_address = &eth_address_instr.data[offsets.eth_address_offset as usize..offsets.eth_address_offset as usize + 1];
+            let message = &message_instr.data[offsets.message_data_offset as usize..offsets.message_data_offset as usize + offsets.message_data_size as usize];
+
+            let signature = <[u8; SIGNATURE_SERIALIZED_SIZE]>::try_from(signature).unwrap();
+            let eth_address = <[u8; HASHED_PUBKEY_SERIALIZED_SIZE]>::try_from(eth_address).unwrap();
+            let message = Vec::from(message);
+
+            sigs.push(SecpSignature {
+                signature, eth_address, message,
+            })
+        }
+        Ok(sigs)
+    }
 }
 
 /// The key we expect to sign secp256k1 messages.
@@ -78,10 +121,7 @@ pub fn demo_secp256k1_verify_basic(
     _instruction: DemoSecp256k1VerifyBasicInstruction,
     accounts: &[AccountInfo],
 ) -> ProgramResult {
-    msg!("demo secp256k1");
-
-    use solana_program::secp256k1_program;
-    use solana_program::sysvar;
+    msg!("demo secp256k1 verify basic");
 
     let account_info_iter = &mut accounts.iter();
 
@@ -149,6 +189,38 @@ pub fn demo_secp256k1_verify_basic(
     }
 
     Ok(())
+}
+
+/// This is just demoing loading and parsing of many signatures,
+/// with no specific goal.
+pub fn demo_secp256k1_custom_many(
+    _instruction: DemoSecp256k1CustomManyInstruction,
+    accounts: &[AccountInfo],
+) -> ProgramResult {
+    msg!("demo secp256k1 custom many");
+
+    let account_info_iter = &mut accounts.iter();
+
+    // The instructions sysvar gives access to the instructions in the transaction.
+    let instructions_sysvar_account = next_account_info(account_info_iter)?;
+    assert!(sysvar::instructions::check_id(
+        instructions_sysvar_account.key
+    ));
+
+    // Load the instruction prior to this one in the transaction.
+    // This is more flexible than expecting the instruction to be at a specific index.
+    let secp256k1_instr =
+        sysvar::instructions::get_instruction_relative(-1, instructions_sysvar_account)?;
+
+    // Verify it is a secp256k1 instruction.
+    // This is security-critical - what if the transaction uses an imposter secp256k1 program?
+    assert!(secp256k1_program::check_id(&secp256k1_instr.program_id));
+    
+    // There must be at least one byte. This is also verified by the runtime,
+    // and doesn't strictly need to be checked.
+    assert!(secp256k1_instr.data.len() > 1);
+
+    todo!()
 }
 
 pub fn demo_secp256k1_recover(

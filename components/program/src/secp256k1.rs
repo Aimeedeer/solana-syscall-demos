@@ -11,9 +11,7 @@ use solana_program::{
 
 /// Definitions copied from solana-sdk
 mod secp256k1_defs {
-    use solana_program::account_info::AccountInfo;
     use solana_program::program_error::ProgramError;
-    use solana_program::sysvar::instructions::load_instruction_at_checked;
     use std::iter::Iterator;
 
     pub const HASHED_PUBKEY_SERIALIZED_SIZE: usize = 20;
@@ -59,45 +57,6 @@ mod secp256k1_defs {
                 message_data_size: decode_u16(chunk, 8),
                 message_instruction_index: chunk[10],
             }))
-    }
-
-    pub struct SecpSignature {
-        pub signature: [u8; SIGNATURE_SERIALIZED_SIZE],
-        pub eth_address: [u8; HASHED_PUBKEY_SERIALIZED_SIZE],
-        pub message: Vec<u8>,
-    }
-
-    /// Load all signatures indicated in the secp256k1 instruction.
-    ///
-    /// This function is quite inefficient for reloading the same instructions
-    /// repeatedly and making copies and allocations.
-    pub fn load_signatures(
-        secp256k1_instr_data: &[u8],
-        instructions_sysvar_account: &AccountInfo,
-    ) -> Result<Vec<SecpSignature>, ProgramError> {
-        let mut sigs = vec![];
-        for offsets in iter_signature_offsets(secp256k1_instr_data)? {
-            let signature_instr =
-                load_instruction_at_checked(offsets.signature_instruction_index as usize, instructions_sysvar_account)?;
-            let eth_address_instr =
-                load_instruction_at_checked(offsets.eth_address_instruction_index as usize, instructions_sysvar_account)?;
-            let message_instr =
-                load_instruction_at_checked(offsets.message_instruction_index as usize, instructions_sysvar_account)?;
-
-            // These indexes must all be valid because the runtime already verified them.
-            let signature = &signature_instr.data[offsets.signature_offset as usize..offsets.signature_offset as usize + 1];
-            let eth_address = &eth_address_instr.data[offsets.eth_address_offset as usize..offsets.eth_address_offset as usize + 1];
-            let message = &message_instr.data[offsets.message_data_offset as usize..offsets.message_data_offset as usize + offsets.message_data_size as usize];
-
-            let signature = <[u8; SIGNATURE_SERIALIZED_SIZE]>::try_from(signature).unwrap();
-            let eth_address = <[u8; HASHED_PUBKEY_SERIALIZED_SIZE]>::try_from(eth_address).unwrap();
-            let message = Vec::from(message);
-
-            sigs.push(SecpSignature {
-                signature, eth_address, message,
-            })
-        }
-        Ok(sigs)
     }
 }
 
@@ -210,8 +169,8 @@ pub fn demo_secp256k1_custom_many(
         sysvar::instructions::get_instruction_relative(-1, instructions_sysvar_account)?;
 
     assert!(secp256k1_program::check_id(&secp256k1_instr.program_id));
-    
-    let signatures = secp256k1_defs::load_signatures(&secp256k1_instr.data, instructions_sysvar_account)?;
+
+    let signatures = load_signatures(&secp256k1_instr.data, instructions_sysvar_account)?;
     for (idx, signature_bundle) in signatures.iter().enumerate() {
         let signature = hex::encode(&signature_bundle.signature);
         let eth_address = hex::encode(&signature_bundle.eth_address);
@@ -222,6 +181,45 @@ pub fn demo_secp256k1_custom_many(
     }
 
     Ok(())
+}
+
+pub struct SecpSignature {
+    pub signature: [u8; secp256k1_defs::SIGNATURE_SERIALIZED_SIZE],
+    pub eth_address: [u8; secp256k1_defs::HASHED_PUBKEY_SERIALIZED_SIZE],
+    pub message: Vec<u8>,
+}
+
+/// Load all signatures indicated in the secp256k1 instruction.
+///
+/// This function is quite inefficient for reloading the same instructions
+/// repeatedly and making copies and allocations.
+pub fn load_signatures(
+    secp256k1_instr_data: &[u8],
+    instructions_sysvar_account: &AccountInfo,
+) -> Result<Vec<SecpSignature>, ProgramError> {
+    let mut sigs = vec![];
+    for offsets in secp256k1_defs::iter_signature_offsets(secp256k1_instr_data)? {
+        let signature_instr =
+            sysvar::instructions::load_instruction_at_checked(offsets.signature_instruction_index as usize, instructions_sysvar_account)?;
+        let eth_address_instr =
+            sysvar::instructions::load_instruction_at_checked(offsets.eth_address_instruction_index as usize, instructions_sysvar_account)?;
+        let message_instr =
+            sysvar::instructions::load_instruction_at_checked(offsets.message_instruction_index as usize, instructions_sysvar_account)?;
+
+        // These indexes must all be valid because the runtime already verified them.
+        let signature = &signature_instr.data[offsets.signature_offset as usize..offsets.signature_offset as usize + 1];
+        let eth_address = &eth_address_instr.data[offsets.eth_address_offset as usize..offsets.eth_address_offset as usize + 1];
+        let message = &message_instr.data[offsets.message_data_offset as usize..offsets.message_data_offset as usize + offsets.message_data_size as usize];
+
+        let signature = <[u8; secp256k1_defs::SIGNATURE_SERIALIZED_SIZE]>::try_from(signature).unwrap();
+        let eth_address = <[u8; secp256k1_defs::HASHED_PUBKEY_SERIALIZED_SIZE]>::try_from(eth_address).unwrap();
+        let message = Vec::from(message);
+
+        sigs.push(SecpSignature {
+            signature, eth_address, message,
+        })
+    }
+    Ok(sigs)
 }
 
 pub fn demo_secp256k1_recover(

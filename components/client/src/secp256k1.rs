@@ -53,6 +53,7 @@ pub fn demo_secp256k1_custom_many(
     client: &RpcClient,
     program_keypair: &Keypair,
 ) -> Result<()> {
+    // Sign some messages.
     let mut signatures = vec![];
     for idx in 1..3 {
         let secret_key = libsecp256k1::SecretKey::random(&mut rand::thread_rng());
@@ -63,8 +64,9 @@ pub fn demo_secp256k1_custom_many(
             hasher.result()
         };
         let secp_message = libsecp256k1::Message::parse(&message_hash.0);
-        let (signature, _) = libsecp256k1::sign(&secp_message, &secret_key);
+        let (signature, recovery_id) = libsecp256k1::sign(&secp_message, &secret_key);
         let signature = signature.serialize();
+        let recovery_id = recovery_id.serialize();
 
         let public_key = libsecp256k1::PublicKey::from_secret_key(&secret_key);
         let eth_address = secp256k1_instruction::construct_eth_pubkey(&public_key);
@@ -74,21 +76,85 @@ pub fn demo_secp256k1_custom_many(
         let message_hex = hex::encode(&message);
 
         println!("sig {}: {:?}", idx, signature_hex);
+        println!("recid {}: {}", idx, recovery_id);
         println!("eth address {}: {}", idx, eth_address_hex);
         println!("message {}: {}", idx, message_hex);
 
         signatures.push(SecpSignature {
-            signature, eth_address, message,
+            signature, recovery_id, eth_address, message,
         });
     }
+
+    let secp256k_instr_data = make_secp256k1_instruction_data(&signatures, 0);
 
     todo!()
 }
 
 pub struct SecpSignature {
     pub signature: [u8; 64],
+    pub recovery_id: u8,
     pub eth_address: [u8; 20],
     pub message: Vec<u8>,
+}
+
+fn make_secp256k1_instruction_data(signatures: &[SecpSignature],
+                                   instruction_index: u8) -> Result<Vec<u8>> {
+    use secp256k1_instruction::SecpSignatureOffsets;
+    use secp256k1_instruction::HASHED_PUBKEY_SERIALIZED_SIZE;
+    use secp256k1_instruction::SIGNATURE_OFFSETS_SERIALIZED_SIZE;
+    use secp256k1_instruction::SIGNATURE_SERIALIZED_SIZE;
+
+    assert!(signatures.len() <= u8::max_value().into());
+
+    // We're going to pack all the signatures into the secp256k1 instruction data.
+    // Before our signatures though is the signature offset structures
+    // the secp256k1 program parses to find those signatures.
+    // This value represents the byte offset where the signatures begin.
+    let data_start = 1 + signatures.len() * SIGNATURE_OFFSETS_SERIALIZED_SIZE;
+
+    let mut signature_offsets = vec![];
+    let mut signature_buffer = vec![];
+
+    for signature_bundle in signatures {
+        let data_start = data_start.checked_add(signature_buffer.len()).expect("overflow");
+
+        let signature_offset = data_start;
+        let eth_address_offset = data_start.checked_add(SIGNATURE_SERIALIZED_SIZE + 1).expect("overflow");
+        let message_data_offset = eth_address_offset.checked_add(HASHED_PUBKEY_SERIALIZED_SIZE).expect("overflow");
+        let message_data_size = signature_bundle.message.len();
+
+        let signature_offset = u16::try_from(signature_offset)?;
+        let eth_address_offset = u16::try_from(eth_address_offset)?;
+        let message_data_offset = u16::try_from(message_data_offset)?;
+        let message_data_size = u16::try_from(message_data_size)?;
+        
+        signature_offsets.push(SecpSignatureOffsets {
+            signature_offset,
+            signature_instruction_index: instruction_index,
+            eth_address_offset,
+            eth_address_instruction_index: instruction_index,
+            message_data_offset,
+            message_data_size,
+            message_instruction_index: instruction_index,
+        });
+
+        signature_buffer.extend(signature_bundle.signature);
+        signature_buffer.push(signature_bundle.recovery_id);
+        signature_buffer.extend(&signature_bundle.eth_address);
+        signature_buffer.extend(&signature_bundle.message);
+    }
+
+    let mut instr_data = vec![];
+    instr_data.push(signatures.len() as u8);
+
+    for offsets in signature_offsets {
+        let offsets = bincode::serialize(&offsets)?;
+        instr_data.extend(offsets);
+    }
+
+    instr_data.extend(signature_buffer);
+
+    Ok(instr_data)
 }
 
 /// Using the `secp256k1_recover` function (`sol_secp256k1_recover` syscall) to

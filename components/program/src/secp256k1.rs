@@ -176,6 +176,7 @@ pub fn demo_secp256k1_custom_many(
         let eth_address = hex::encode(&signature_bundle.eth_address);
         let message = hex::encode(&signature_bundle.message);
         msg!("sig {}: {:?}", idx, signature);
+        msg!("recid: {}: {}", idx, signature_bundle.recovery_id);
         msg!("eth address {}: {}", idx, eth_address);
         msg!("message {}: {}", idx, message);
     }
@@ -185,6 +186,7 @@ pub fn demo_secp256k1_custom_many(
 
 pub struct SecpSignature {
     pub signature: [u8; secp256k1_defs::SIGNATURE_SERIALIZED_SIZE],
+    pub recovery_id: u8,
     pub eth_address: [u8; secp256k1_defs::HASHED_PUBKEY_SERIALIZED_SIZE],
     pub message: Vec<u8>,
 }
@@ -207,8 +209,9 @@ pub fn load_signatures(
             sysvar::instructions::load_instruction_at_checked(offsets.message_instruction_index as usize, instructions_sysvar_account)?;
 
         // These indexes must all be valid because the runtime already verified them.
-        let signature = &signature_instr.data[offsets.signature_offset as usize..offsets.signature_offset as usize + 1];
-        let eth_address = &eth_address_instr.data[offsets.eth_address_offset as usize..offsets.eth_address_offset as usize + 1];
+        let signature = &signature_instr.data[offsets.signature_offset as usize..offsets.signature_offset as usize + secp256k1_defs::SIGNATURE_SERIALIZED_SIZE];
+        let recovery_id = signature_instr.data[offsets.signature_offset as usize + secp256k1_defs::SIGNATURE_SERIALIZED_SIZE];
+        let eth_address = &eth_address_instr.data[offsets.eth_address_offset as usize..offsets.eth_address_offset as usize + secp256k1_defs::HASHED_PUBKEY_SERIALIZED_SIZE];
         let message = &message_instr.data[offsets.message_data_offset as usize..offsets.message_data_offset as usize + offsets.message_data_size as usize];
 
         let signature = <[u8; secp256k1_defs::SIGNATURE_SERIALIZED_SIZE]>::try_from(signature).unwrap();
@@ -216,7 +219,7 @@ pub fn load_signatures(
         let message = Vec::from(message);
 
         sigs.push(SecpSignature {
-            signature, eth_address, message,
+            signature, recovery_id, eth_address, message,
         })
     }
     Ok(sigs)

@@ -1,4 +1,7 @@
-use common::{DemoSecp256k1RecoverInstruction, DemoSecp256k1VerifyBasicInstruction, DemoSecp256k1CustomManyInstruction};
+use common::{
+    DemoSecp256k1CustomManyInstruction, DemoSecp256k1RecoverInstruction,
+    DemoSecp256k1VerifyBasicInstruction,
+};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
@@ -71,8 +74,7 @@ const AUTHORIZED_PUBLIC_KEY: [u8; 64] = [
 
 /// The Ethereum address hashed from `AUTHORIZED_PUBLIC_KEY` via `construct_eth_pubkey`.
 const AUTHORIZED_ETH_ADDRESS: [u8; 20] = [
-    0x18, 0x8a, 0x5c, 0xf2, 0x3b, 0x0e, 0xff, 0xe9,
-    0xa8, 0xe1, 0x42, 0x64, 0x5b, 0x82, 0x2f, 0x3a,
+    0x18, 0x8a, 0x5c, 0xf2, 0x3b, 0x0e, 0xff, 0xe9, 0xa8, 0xe1, 0x42, 0x64, 0x5b, 0x82, 0x2f, 0x3a,
     0x6b, 0x8b, 0x52, 0x35,
 ];
 
@@ -201,25 +203,40 @@ pub fn load_signatures(
 ) -> Result<Vec<SecpSignature>, ProgramError> {
     let mut sigs = vec![];
     for offsets in secp256k1_defs::iter_signature_offsets(secp256k1_instr_data)? {
-        let signature_instr =
-            sysvar::instructions::load_instruction_at_checked(offsets.signature_instruction_index as usize, instructions_sysvar_account)?;
-        let eth_address_instr =
-            sysvar::instructions::load_instruction_at_checked(offsets.eth_address_instruction_index as usize, instructions_sysvar_account)?;
-        let message_instr =
-            sysvar::instructions::load_instruction_at_checked(offsets.message_instruction_index as usize, instructions_sysvar_account)?;
+        let signature_instr = sysvar::instructions::load_instruction_at_checked(
+            offsets.signature_instruction_index as usize,
+            instructions_sysvar_account,
+        )?;
+        let eth_address_instr = sysvar::instructions::load_instruction_at_checked(
+            offsets.eth_address_instruction_index as usize,
+            instructions_sysvar_account,
+        )?;
+        let message_instr = sysvar::instructions::load_instruction_at_checked(
+            offsets.message_instruction_index as usize,
+            instructions_sysvar_account,
+        )?;
 
         // These indexes must all be valid because the runtime already verified them.
-        let signature = &signature_instr.data[offsets.signature_offset as usize..offsets.signature_offset as usize + secp256k1_defs::SIGNATURE_SERIALIZED_SIZE];
-        let recovery_id = signature_instr.data[offsets.signature_offset as usize + secp256k1_defs::SIGNATURE_SERIALIZED_SIZE];
-        let eth_address = &eth_address_instr.data[offsets.eth_address_offset as usize..offsets.eth_address_offset as usize + secp256k1_defs::HASHED_PUBKEY_SERIALIZED_SIZE];
-        let message = &message_instr.data[offsets.message_data_offset as usize..offsets.message_data_offset as usize + offsets.message_data_size as usize];
+        let signature = &signature_instr.data[offsets.signature_offset as usize
+            ..offsets.signature_offset as usize + secp256k1_defs::SIGNATURE_SERIALIZED_SIZE];
+        let recovery_id = signature_instr.data
+            [offsets.signature_offset as usize + secp256k1_defs::SIGNATURE_SERIALIZED_SIZE];
+        let eth_address = &eth_address_instr.data[offsets.eth_address_offset as usize
+            ..offsets.eth_address_offset as usize + secp256k1_defs::HASHED_PUBKEY_SERIALIZED_SIZE];
+        let message = &message_instr.data[offsets.message_data_offset as usize
+            ..offsets.message_data_offset as usize + offsets.message_data_size as usize];
 
-        let signature = <[u8; secp256k1_defs::SIGNATURE_SERIALIZED_SIZE]>::try_from(signature).unwrap();
-        let eth_address = <[u8; secp256k1_defs::HASHED_PUBKEY_SERIALIZED_SIZE]>::try_from(eth_address).unwrap();
+        let signature =
+            <[u8; secp256k1_defs::SIGNATURE_SERIALIZED_SIZE]>::try_from(signature).unwrap();
+        let eth_address =
+            <[u8; secp256k1_defs::HASHED_PUBKEY_SERIALIZED_SIZE]>::try_from(eth_address).unwrap();
         let message = Vec::from(message);
 
         sigs.push(SecpSignature {
-            signature, recovery_id, eth_address, message,
+            signature,
+            recovery_id,
+            eth_address,
+            message,
         })
     }
     Ok(sigs)

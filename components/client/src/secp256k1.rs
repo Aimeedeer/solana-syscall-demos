@@ -81,7 +81,10 @@ pub fn demo_secp256k1_custom_many(
         println!("message {}: {}", idx, message_hex);
 
         signatures.push(SecpSignature {
-            signature, recovery_id, eth_address, message,
+            signature,
+            recovery_id,
+            eth_address,
+            message,
         });
     }
 
@@ -97,8 +100,10 @@ pub struct SecpSignature {
     pub message: Vec<u8>,
 }
 
-fn make_secp256k1_instruction_data(signatures: &[SecpSignature],
-                                   instruction_index: u8) -> Result<Vec<u8>> {
+fn make_secp256k1_instruction_data(
+    signatures: &[SecpSignature],
+    instruction_index: u8,
+) -> Result<Vec<u8>> {
     use secp256k1_instruction::SecpSignatureOffsets;
     use secp256k1_instruction::HASHED_PUBKEY_SERIALIZED_SIZE;
     use secp256k1_instruction::SIGNATURE_OFFSETS_SERIALIZED_SIZE;
@@ -116,18 +121,24 @@ fn make_secp256k1_instruction_data(signatures: &[SecpSignature],
     let mut signature_buffer = vec![];
 
     for signature_bundle in signatures {
-        let data_start = data_start.checked_add(signature_buffer.len()).expect("overflow");
+        let data_start = data_start
+            .checked_add(signature_buffer.len())
+            .expect("overflow");
 
         let signature_offset = data_start;
-        let eth_address_offset = data_start.checked_add(SIGNATURE_SERIALIZED_SIZE + 1).expect("overflow");
-        let message_data_offset = eth_address_offset.checked_add(HASHED_PUBKEY_SERIALIZED_SIZE).expect("overflow");
+        let eth_address_offset = data_start
+            .checked_add(SIGNATURE_SERIALIZED_SIZE + 1)
+            .expect("overflow");
+        let message_data_offset = eth_address_offset
+            .checked_add(HASHED_PUBKEY_SERIALIZED_SIZE)
+            .expect("overflow");
         let message_data_size = signature_bundle.message.len();
 
         let signature_offset = u16::try_from(signature_offset)?;
         let eth_address_offset = u16::try_from(eth_address_offset)?;
         let message_data_offset = u16::try_from(message_data_offset)?;
         let message_data_size = u16::try_from(message_data_size)?;
-        
+
         signature_offsets.push(SecpSignatureOffsets {
             signature_offset,
             signature_instruction_index: instruction_index,

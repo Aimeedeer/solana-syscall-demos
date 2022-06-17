@@ -62,9 +62,9 @@ mod secp256k1_defs {
     }
 
     pub struct SecpSignature {
-        signature: [u8; SIGNATURE_SERIALIZED_SIZE],
-        eth_address: [u8; HASHED_PUBKEY_SERIALIZED_SIZE],
-        message: Vec<u8>,
+        pub signature: [u8; SIGNATURE_SERIALIZED_SIZE],
+        pub eth_address: [u8; HASHED_PUBKEY_SERIALIZED_SIZE],
+        pub message: Vec<u8>,
     }
 
     /// Load all signatures indicated in the secp256k1 instruction.
@@ -201,26 +201,27 @@ pub fn demo_secp256k1_custom_many(
 
     let account_info_iter = &mut accounts.iter();
 
-    // The instructions sysvar gives access to the instructions in the transaction.
     let instructions_sysvar_account = next_account_info(account_info_iter)?;
     assert!(sysvar::instructions::check_id(
         instructions_sysvar_account.key
     ));
 
-    // Load the instruction prior to this one in the transaction.
-    // This is more flexible than expecting the instruction to be at a specific index.
     let secp256k1_instr =
         sysvar::instructions::get_instruction_relative(-1, instructions_sysvar_account)?;
 
-    // Verify it is a secp256k1 instruction.
-    // This is security-critical - what if the transaction uses an imposter secp256k1 program?
     assert!(secp256k1_program::check_id(&secp256k1_instr.program_id));
     
-    // There must be at least one byte. This is also verified by the runtime,
-    // and doesn't strictly need to be checked.
-    assert!(secp256k1_instr.data.len() > 1);
+    let signatures = secp256k1_defs::load_signatures(&secp256k1_instr.data, instructions_sysvar_account)?;
+    for (idx, signature_bundle) in signatures.iter().enumerate() {
+        let signature = hex::encode(&signature_bundle.signature);
+        let eth_address = hex::encode(&signature_bundle.eth_address);
+        let message = hex::encode(&signature_bundle.message);
+        msg!("sig {}: {:?}", idx, signature);
+        msg!("eth address {}: {}", idx, eth_address);
+        msg!("message {}: {}", idx, message);
+    }
 
-    todo!()
+    Ok(())
 }
 
 pub fn demo_secp256k1_recover(

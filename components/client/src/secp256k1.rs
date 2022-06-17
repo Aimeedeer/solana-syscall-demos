@@ -46,6 +46,51 @@ pub fn demo_secp256k1_verify_basic(
     Ok(())
 }
 
+/// Using the secp256k1 program in a more complex way,
+/// without a specific goal.
+pub fn demo_secp256k1_custom_many(
+    config: &crate::util::Config,
+    client: &RpcClient,
+    program_keypair: &Keypair,
+) -> Result<()> {
+    let mut signatures = vec![];
+    for idx in 1..3 {
+        let secret_key = libsecp256k1::SecretKey::random(&mut rand::thread_rng());
+        let message = format!("hello world {}", idx).into_bytes();
+        let message_hash = {
+            let mut hasher = keccak::Hasher::default();
+            hasher.hash(&message);
+            hasher.result()
+        };
+        let secp_message = libsecp256k1::Message::parse(&message_hash.0);
+        let (signature, _) = libsecp256k1::sign(&secp_message, &secret_key);
+        let signature = signature.serialize();
+
+        let public_key = libsecp256k1::PublicKey::from_secret_key(&secret_key);
+        let eth_address = secp256k1_instruction::construct_eth_pubkey(&public_key);
+
+        let signature_hex = hex::encode(&signature);
+        let eth_address_hex = hex::encode(&eth_address);
+        let message_hex = hex::encode(&message);
+
+        println!("sig {}: {:?}", idx, signature_hex);
+        println!("eth address {}: {}", idx, eth_address_hex);
+        println!("message {}: {}", idx, message_hex);
+
+        signatures.push(SecpSignature {
+            signature, eth_address, message,
+        });
+    }
+
+    todo!()
+}
+
+pub struct SecpSignature {
+    pub signature: [u8; 64],
+    pub eth_address: [u8; 20],
+    pub message: Vec<u8>,
+}
+
 /// Using the `secp256k1_recover` function (`sol_secp256k1_recover` syscall) to
 /// recover a public key from a 32-byte message (a keccak hash), a 64-byte
 /// signature, and recovery id.

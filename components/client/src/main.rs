@@ -23,6 +23,7 @@ enum Command {
     PrintSysvarsViaProgram,
     PrintSysvarsViaClient,
     DemoSecp256k1VerifyBasic,
+    DemoSecp256k1CustomMany,
     DemoSecp256k1Recover,
     DemoInvoke,
     DemoPubsubClient,
@@ -60,6 +61,9 @@ fn main() -> Result<()> {
         }
         Command::DemoSecp256k1VerifyBasic => {
             secp256k1::demo_secp256k1_verify_basic(&config, &client, &program_keypair)?;
+        }
+        Command::DemoSecp256k1CustomMany => {
+            secp256k1::demo_secp256k1_custom_many(&config, &client, &program_keypair)?;
         }
         Command::DemoSecp256k1Recover => {
             secp256k1::demo_secp256k1_recover(&config, &client, &program_keypair)?;

@@ -16,12 +16,25 @@ mod secp256k1_defs {
     pub const SIGNATURE_SERIALIZED_SIZE: usize = 64;
     pub const SIGNATURE_OFFSETS_SERIALIZED_SIZE: usize = 11;
 
+    /// The structure encoded in the secp2256k1 instruction data.
+    pub struct SecpSignatureOffsets {
+        pub signature_offset: u16,
+        pub signature_instruction_index: u8,
+        pub eth_address_offset: u16,
+        pub eth_address_instruction_index: u8,
+        pub message_data_offset: u16,
+        pub message_data_size: u16,
+        pub message_instruction_index: u8,
+    }
+
     pub fn iter_signature_offsets(
         secp256k1_instr_data: &[u8],
     ) -> Result<impl Iterator<Item = SecpSignatureOffsets> + '_, ProgramError> {
+        // First element is the number of `SecpSignatureOffsets`.
         let num_structs = *secp256k1_instr_data
             .get(0)
             .ok_or(ProgramError::InvalidArgument)?;
+
         let all_structs_size = SIGNATURE_OFFSETS_SERIALIZED_SIZE * num_structs as usize;
         let all_structs_slice = secp256k1_instr_data
             .get(1..all_structs_size + 1)
@@ -43,16 +56,6 @@ mod secp256k1_defs {
                 message_instruction_index: chunk[10],
             }))
     }
-
-    pub struct SecpSignatureOffsets {
-        pub signature_offset: u16,
-        pub signature_instruction_index: u8,
-        pub eth_address_offset: u16,
-        pub eth_address_instruction_index: u8,
-        pub message_data_offset: u16,
-        pub message_data_size: u16,
-        pub message_instruction_index: u8,
-    }
 }
 
 /// The key we expect to sign secp256k1 messages.
@@ -64,12 +67,12 @@ const AUTHORIZED_PUBLIC_KEY: [u8; 64] = [
     0x45, 0xAE, 0xFC, 0x66, 0x9C, 0x2C, 0x6B, 0xF3, 0xEF, 0xCA, 0x5C, 0x32, 0x11, 0xF7, 0x2A, 0xC7,
 ];
 
-/// Transform the authorized pubkey into an ethereum address.
-fn authorized_hashed_eth_public_key() -> [u8; 20] {
-    let mut addr = [0u8; secp256k1_defs::HASHED_PUBKEY_SERIALIZED_SIZE];
-    addr.copy_from_slice(&keccak::hash(&AUTHORIZED_PUBLIC_KEY).0[12..]);
-    addr
-}
+/// The Ethereum address hashed from `AUTHORIZED_PUBLIC_KEY` via `construct_eth_pubkey`.
+const AUTHORIZED_ETH_ADDRESS: [u8; 20] = [
+    0x18, 0x8a, 0x5c, 0xf2, 0x3b, 0x0e, 0xff, 0xe9,
+    0xa8, 0xe1, 0x42, 0x64, 0x5b, 0x82, 0x2f, 0x3a,
+    0x6b, 0x8b, 0x52, 0x35,
+];
 
 pub fn demo_secp256k1_verify_basic(
     _instruction: DemoSecp256k1VerifyBasicInstruction,
@@ -132,17 +135,16 @@ pub fn demo_secp256k1_verify_basic(
     }
 
     // There is likely at least one more verification step a real program needs
-    // to do here to ensure it trusts the secp256k1 transaction, e.g.:
+    // to do here to ensure it trusts the secp256k1 instruction, e.g.:
     //
     // - verify the tx signer is authorized
     // - verify the secp256k1 signer is authorized
 
     // Here we are checking the secp256k1 pubkey against a known authorized pubkey.
-    let pubkey = &secp256k1_instr.data[offsets.eth_address_offset as usize
+    let eth_address = &secp256k1_instr.data[offsets.eth_address_offset as usize
         ..offsets.eth_address_offset as usize + secp256k1_defs::HASHED_PUBKEY_SERIALIZED_SIZE];
-    let authorized_pubkey = authorized_hashed_eth_public_key();
 
-    if pubkey != authorized_pubkey {
+    if eth_address != AUTHORIZED_ETH_ADDRESS {
         return Err(ProgramError::InvalidArgument);
     }
 

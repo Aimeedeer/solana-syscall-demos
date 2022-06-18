@@ -1,9 +1,12 @@
 use anyhow::Result;
-use common::{DemoSecp256k1RecoverInstruction, DemoSecp256k1VerifyBasicInstruction, DemoSecp256k1CustomManyInstruction};
+use common::{
+    DemoSecp256k1CustomManyInstruction, DemoSecp256k1RecoverInstruction,
+    DemoSecp256k1VerifyBasicInstruction,
+};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
-    keccak, secp256k1_instruction,
     instruction::Instruction,
+    keccak, secp256k1_instruction,
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
@@ -96,8 +99,8 @@ pub fn demo_secp256k1_custom_many(
         vec![],
     );
 
-    let program_instr = DemoSecp256k1CustomManyInstruction
-        .build_instruction(&program_keypair.pubkey());
+    let program_instr =
+        DemoSecp256k1CustomManyInstruction.build_instruction(&program_keypair.pubkey());
 
     let blockhash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(

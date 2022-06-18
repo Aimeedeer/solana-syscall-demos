@@ -123,6 +123,12 @@ pub struct SecpSignature {
     pub message: Vec<u8>,
 }
 
+/// Create the instruction data for a secp256k1 instruction.
+///
+/// `instruction_index` is the index the secp256k1 instruction will appear
+/// within the transaction. For simplicity, this function only supports packing
+/// the signatures into the secp256k1 instruction data, and not into any other
+/// instructions within the transaction.
 fn make_secp256k1_instruction_data(
     signatures: &[SecpSignature],
     instruction_index: u8,

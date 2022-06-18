@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use anyhow::Result;
 use futures_util::StreamExt;
 use solana_account_decoder::UiAccount;

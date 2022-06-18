@@ -1,8 +1,9 @@
 use anyhow::Result;
-use common::{DemoSecp256k1RecoverInstruction, DemoSecp256k1VerifyBasicInstruction};
+use common::{DemoSecp256k1RecoverInstruction, DemoSecp256k1VerifyBasicInstruction, DemoSecp256k1CustomManyInstruction};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     keccak, secp256k1_instruction,
+    instruction::Instruction,
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
@@ -27,14 +28,14 @@ pub fn demo_secp256k1_verify_basic(
     // `secp256k_instruction::verify` (the secp256k1 program), this message is
     // keccak-hashed before signing.
     let msg = b"hello world";
-    let verify_secp256k1_instr = secp256k1_instruction::new_secp256k1_instruction(&secret_key, msg);
+    let secp256k1_instr = secp256k1_instruction::new_secp256k1_instruction(&secret_key, msg);
 
     let program_instr =
-        DemoSecp256k1VerifyBasicInstruction {}.build_instruction(&program_keypair.pubkey());
+        DemoSecp256k1VerifyBasicInstruction.build_instruction(&program_keypair.pubkey());
 
     let blockhash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(
-        &[verify_secp256k1_instr, program_instr],
+        &[secp256k1_instr, program_instr],
         Some(&config.keypair.pubkey()),
         &[&config.keypair],
         blockhash,
@@ -55,7 +56,7 @@ pub fn demo_secp256k1_custom_many(
 ) -> Result<()> {
     // Sign some messages.
     let mut signatures = vec![];
-    for idx in 1..3 {
+    for idx in 0..2 {
         let secret_key = libsecp256k1::SecretKey::random(&mut rand::thread_rng());
         let message = format!("hello world {}", idx).into_bytes();
         let message_hash = {
@@ -88,9 +89,28 @@ pub fn demo_secp256k1_custom_many(
         });
     }
 
-    let secp256k_instr_data = make_secp256k1_instruction_data(&signatures, 0);
+    let secp256k1_instr_data = make_secp256k1_instruction_data(&signatures, 0)?;
+    let secp256k1_instr = Instruction::new_with_bytes(
+        solana_sdk::secp256k1_program::ID,
+        &secp256k1_instr_data,
+        vec![],
+    );
 
-    todo!()
+    let program_instr = DemoSecp256k1CustomManyInstruction
+        .build_instruction(&program_keypair.pubkey());
+
+    let blockhash = client.get_latest_blockhash()?;
+    let tx = Transaction::new_signed_with_payer(
+        &[secp256k1_instr, program_instr],
+        Some(&config.keypair.pubkey()),
+        &[&config.keypair],
+        blockhash,
+    );
+
+    let sig = client.send_and_confirm_transaction(&tx)?;
+    println!("sig: {}", sig);
+
+    Ok(())
 }
 
 pub struct SecpSignature {
@@ -216,6 +236,7 @@ pub fn demo_secp256k1_recover(
     Ok(())
 }
 
+#[allow(unused)]
 pub fn test_libsecp256k1_malleability() -> Result<()> {
     let secret_key = libsecp256k1::SecretKey::random(&mut rand::thread_rng());
     let public_key = libsecp256k1::PublicKey::from_secret_key(&secret_key);

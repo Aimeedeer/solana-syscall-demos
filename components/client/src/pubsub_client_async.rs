@@ -28,8 +28,11 @@ use solana_transaction_status::{TransactionDetails, UiTransactionEncoding};
 use std::collections::HashSet;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
-use tokio::sync::mpsc::unbounded_channel;
+use tokio::sync::mpsc::{channel, unbounded_channel};
+use tokio::sync::oneshot;
 use tokio::task;
+use tokio::time::sleep;
+use tokio::time::Duration;
 
 pub fn demo_pubsub_client_async(
     config_keypair: Keypair,
@@ -54,10 +57,22 @@ pub fn demo_pubsub_client_async(
         let (signature_sender, mut signature_receiver) =
             unbounded_channel::<(Signature, Response<RpcSignatureResult>)>();
 
+        // channels for unsubscribe
+        let (slot_unsubscribe_sender, mut slot_unsubscribe_receiver) = oneshot::channel();
+        let (slot_updates_unsubscribe_sender, mut slot_updates_unsubscribe_receiver) =
+            oneshot::channel();
+        let (logs_unsubscribe_sender, mut logs_unsubscribe_receiver) = oneshot::channel();
+        let (root_unsubscribe_sender, mut root_unsubscribe_receiver) = oneshot::channel();
+        let (block_unsubscribe_sender, mut block_unsubscribe_receiver) = oneshot::channel();
+        let (program_unsubscribe_sender, mut program_unsubscribe_receiver) = oneshot::channel();
+        let (account_unsubscribe_sender, mut account_unsubscribe_receiver) = oneshot::channel();
+        let (vote_unsubscribe_sender, mut vote_unsubscribe_receiver) = oneshot::channel();
+        let (signature_unsubscribe_sender, mut signature_unsubscribe_receiver) = channel(5);
+
         // transactions for test
         let transfer_amount = Rent::default().minimum_balance(0);
         let recent_blockhash = rpc_client.get_latest_blockhash().unwrap();
-        let transactions: Vec<Transaction> = (0..10)
+        let transactions: Vec<Transaction> = (0..5)
             .map(|_| {
                 system_transaction::transfer(
                     &config_keypair,
@@ -85,11 +100,13 @@ pub fn demo_pubsub_client_async(
 
                 ready_sender.send(()).unwrap();
 
+                if let Err(_) = slot_unsubscribe_sender.send(slot_unsubscribe) {
+                    println!("slot_unsubscribe receiver dropped");
+                }
+
                 while let Some(slot_info) = slot_notifications.next().await {
                     slot_sender.send(slot_info).unwrap();
                 }
-
-                slot_unsubscribe().await;
             }
         });
 
@@ -101,12 +118,13 @@ pub fn demo_pubsub_client_async(
                     pubsub_client.slot_updates_subscribe().await.unwrap();
 
                 ready_sender.send(()).unwrap();
+                if let Err(_) = slot_updates_unsubscribe_sender.send(slot_updates_unsubscribe) {
+                    println!("slot_updates_unsubscribe receiver dropped");
+                }
 
                 while let Some(slot_updates) = slot_updates_notifications.next().await {
                     slot_updates_sender.send(slot_updates).unwrap();
                 }
-
-                slot_updates_unsubscribe().await;
             }
         });
 
@@ -127,12 +145,13 @@ pub fn demo_pubsub_client_async(
                     .unwrap();
 
                 ready_sender.send(()).unwrap();
+                if let Err(_) = logs_unsubscribe_sender.send(logs_unsubscribe) {
+                    println!("logs_unsubscribe receiver dropped");
+                }
 
                 while let Some(logs) = logs_notifications.next().await {
                     logs_sender.send(logs).unwrap();
                 }
-
-                logs_unsubscribe().await;
             }
         });
 
@@ -144,15 +163,21 @@ pub fn demo_pubsub_client_async(
                     pubsub_client.root_subscribe().await.unwrap();
 
                 ready_sender.send(()).unwrap();
+                if let Err(_) = root_unsubscribe_sender.send(root_unsubscribe) {
+                    println!("root_unsubscribe receiver dropped");
+                }
 
                 while let Some(root) = root_notifications.next().await {
                     root_sender.send(root).unwrap();
                 }
-
-                root_unsubscribe().await;
             }
         });
 
+        // thread 'tokio-runtime-worker' panicked at 'called
+        // `Result::unwrap()` on an `Err` value: SubscribeFailed {
+        // reason: "Method not found (-32601)", message:
+        // "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32601,\"message\":\"Method
+        // not found\"},\"id\":8}" }',
         let task_block_subscribe = tokio::spawn({
             let ready_sender = ready_sender.clone();
             let pubsub_client = Arc::clone(&pubsub_client);
@@ -174,12 +199,13 @@ pub fn demo_pubsub_client_async(
                     .unwrap();
 
                 ready_sender.send(()).unwrap();
+                if let Err(_) = block_unsubscribe_sender.send(block_unsubscribe) {
+                    println!("block_unsubscribe receiver dropped");
+                }
 
                 while let Some(block) = block_notifications.next().await {
                     block_sender.send(block).unwrap();
                 }
-
-                block_unsubscribe().await;
             }
         });
 
@@ -199,11 +225,13 @@ pub fn demo_pubsub_client_async(
                     .unwrap();
 
                 ready_sender.send(()).unwrap();
+                if let Err(_) = program_unsubscribe_sender.send(program_unsubscribe) {
+                    println!("program_unsubscribe receiver dropped");
+                }
 
                 while let Some(program) = program_notifications.next().await {
                     program_sender.send(program).unwrap();
                 }
-                program_unsubscribe().await;
             }
         });
 
@@ -224,14 +252,21 @@ pub fn demo_pubsub_client_async(
 
                 ready_sender.send(()).unwrap();
 
+                if let Err(_) = account_unsubscribe_sender.send(account_unsubscribe) {
+                    println!("account_unsubscribe receiver dropped");
+                }
+
                 while let Some(account) = account_notifications.next().await {
                     account_sender.send(account).unwrap();
                 }
-                account_unsubscribe().await;
             }
         });
 
-        // don't see the result from localhost/devnet
+        // Thread 'Tokio-runtime-worker' panicked at 'called
+        // `Result::unwrap()` on an `Err` value: SubscribeFailed {
+        // reason: "Method not found (-32601)", message:
+        // "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32601,\"message\":\"Method
+        // not found\"},\"id\":1}" }'
         let task_vote_subscribe = tokio::spawn({
             let ready_sender = ready_sender.clone();
             let pubsub_client = Arc::clone(&pubsub_client);
@@ -241,10 +276,13 @@ pub fn demo_pubsub_client_async(
 
                 ready_sender.send(()).unwrap();
 
+                if let Err(_) = vote_unsubscribe_sender.send(vote_unsubscribe) {
+                    println!("vote_unsubscribe receiver dropped");
+                }
+
                 while let Some(vote) = vote_notifications.next().await {
                     vote_sender.send(vote).unwrap();
                 }
-                vote_unsubscribe().await;
             }
         });
 
@@ -257,6 +295,7 @@ pub fn demo_pubsub_client_async(
                     let signature_sender = signature_sender.clone();
                     let ready_sender = ready_sender.clone();
                     let pubsub_client = Arc::clone(&pubsub_client);
+                    let signature_unsubscribe_sender = signature_unsubscribe_sender.clone();
                     async move {
                         let (mut signature_notifications, signature_unsubscribe) = pubsub_client
                             .signature_subscribe(
@@ -270,12 +309,16 @@ pub fn demo_pubsub_client_async(
                             .unwrap();
 
                         ready_sender.send(()).unwrap();
+                        if let Err(_) = signature_unsubscribe_sender
+                            .send(signature_unsubscribe)
+                            .await
+                        {
+                            println!("signature_unsubscribe receiver dropped");
+                        }
 
                         while let Some(sig_response) = signature_notifications.next().await {
                             signature_sender.send((signature, sig_response)).unwrap();
                         }
-
-                        signature_unsubscribe().await;
                     }
                 });
             }
@@ -286,6 +329,8 @@ pub fn demo_pubsub_client_async(
                 if let Some(result) = slot_receiver.recv().await {
                     println!("------------------------------------------------------------");
                     println!("slot pubsub result: {:?}", result);
+                } else {
+                    break;
                 }
             }
         });
@@ -295,6 +340,8 @@ pub fn demo_pubsub_client_async(
                 if let Some(result) = slot_updates_receiver.recv().await {
                     println!("------------------------------------------------------------");
                     println!("slot_updates pubsub result: {:?}", result);
+                } else {
+                    break;
                 }
             }
         });
@@ -318,6 +365,8 @@ pub fn demo_pubsub_client_async(
                     for log in logs.value.logs {
                         println!("    {}", log);
                     }
+                } else {
+                    break;
                 }
             }
         });
@@ -327,6 +376,8 @@ pub fn demo_pubsub_client_async(
                 if let Some(result) = root_receiver.recv().await {
                     println!("------------------------------------------------------------");
                     println!("root pubsub result: {:?}", result);
+                } else {
+                    break;
                 }
             }
         });
@@ -336,6 +387,8 @@ pub fn demo_pubsub_client_async(
                 if let Some(result) = block_receiver.recv().await {
                     println!("------------------------------------------------------------");
                     println!("block pubsub result: {:?}", result);
+                } else {
+                    break;
                 }
             }
         });
@@ -345,6 +398,8 @@ pub fn demo_pubsub_client_async(
                 if let Some(result) = program_receiver.recv().await {
                     println!("------------------------------------------------------------");
                     println!("program pubsub result: {:?}", result);
+                } else {
+                    break;
                 }
             }
         });
@@ -354,6 +409,8 @@ pub fn demo_pubsub_client_async(
                 if let Some(result) = account_receiver.recv().await {
                     println!("------------------------------------------------------------");
                     println!("account pubsub result: {:?}", result);
+                } else {
+                    break;
                 }
             }
         });
@@ -363,6 +420,8 @@ pub fn demo_pubsub_client_async(
                 if let Some(result) = vote_receiver.recv().await {
                     println!("------------------------------------------------------------");
                     println!("vote pubsub result: {:?}", result);
+                } else {
+                    break;
                 }
             }
         });
@@ -372,6 +431,8 @@ pub fn demo_pubsub_client_async(
                 if let Some(result) = signature_receiver.recv().await {
                     println!("------------------------------------------------------------");
                     println!("signature pubsub result: {:?}", result);
+                } else {
+                    break;
                 }
             }
         });
@@ -391,8 +452,8 @@ pub fn demo_pubsub_client_async(
             ready_receiver.recv().await;
             ready_receiver.recv().await;
 
-            // signals from 10 test signature subscriptions
-            for i in 0..10 {
+            // signals from 5 test signature subscriptions
+            for i in 0..5 {
                 ready_receiver.recv().await;
             }
 
@@ -402,6 +463,92 @@ pub fn demo_pubsub_client_async(
                 println!("transfer sig: {}", sig);
             }
         });
+
+        // unsubscribe all
+        match slot_unsubscribe_receiver.await {
+            Ok(slot_unsubscribe) => {
+                sleep(Duration::from_secs(5)).await;
+                slot_unsubscribe().await;
+            }
+            Err(e) => {
+                println!("slot_unsubscribe_receiver error: {}", e);
+            }
+        }
+
+        match slot_updates_unsubscribe_receiver.await {
+            Ok(slot_updates_unsubscribe) => {
+                sleep(Duration::from_secs(5)).await;
+                slot_updates_unsubscribe().await;
+            }
+            Err(e) => {
+                println!("slot_updates_unsubscribe_receiver error: {}", e);
+            }
+        }
+
+        match logs_unsubscribe_receiver.await {
+            Ok(logs_unsubscribe) => {
+                sleep(Duration::from_secs(5)).await;
+                logs_unsubscribe().await;
+            }
+            Err(e) => {
+                println!("logs_unsubscribe_receiver error: {}", e);
+            }
+        }
+
+        match root_unsubscribe_receiver.await {
+            Ok(root_unsubscribe) => {
+                sleep(Duration::from_secs(5)).await;
+                root_unsubscribe().await;
+            }
+            Err(e) => {
+                println!("root_unsubscribe_receiver error: {}", e);
+            }
+        }
+
+        match block_unsubscribe_receiver.await {
+            Ok(block_unsubscribe) => {
+                sleep(Duration::from_secs(5)).await;
+                block_unsubscribe().await;
+            }
+            Err(e) => {
+                println!("block_unsubscribe_receiver error: {}", e);
+            }
+        }
+
+        match program_unsubscribe_receiver.await {
+            Ok(program_unsubscribe) => {
+                sleep(Duration::from_secs(5)).await;
+                program_unsubscribe().await;
+            }
+            Err(e) => {
+                println!("program_unsubscribe_receiver error: {}", e);
+            }
+        }
+
+        match account_unsubscribe_receiver.await {
+            Ok(account_unsubscribe) => {
+                sleep(Duration::from_secs(5)).await;
+                account_unsubscribe().await;
+            }
+            Err(e) => {
+                println!("account_unsubscribe_receiver error: {}", e);
+            }
+        }
+
+        match vote_unsubscribe_receiver.await {
+            Ok(vote_unsubscribe) => {
+                sleep(Duration::from_secs(5)).await;
+                vote_unsubscribe().await;
+            }
+            Err(e) => {
+                println!("vote_unsubscribe_receiver error: {}", e);
+            }
+        }
+
+        while let Some(signature_unsubscribe) = signature_unsubscribe_receiver.recv().await {
+            sleep(Duration::from_secs(1)).await;
+            signature_unsubscribe().await;
+        }
 
         task_slot_subscribe.await;
         task_slot_receiver.await;

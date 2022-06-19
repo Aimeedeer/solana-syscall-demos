@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use anyhow::Result;
 use crossbeam_channel::unbounded;
 use solana_client::rpc_response::SlotInfo;

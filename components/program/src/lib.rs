@@ -27,6 +27,9 @@ fn process_instruction(
         CustomInstruction::DemoSecp256k1VerifyBasic(instr) => {
             secp256k1::demo_secp256k1_verify_basic(instr, accounts)?;
         }
+        CustomInstruction::DemoSecp256k1CustomMany(instr) => {
+            secp256k1::demo_secp256k1_custom_many(instr, accounts)?;
+        }
         CustomInstruction::DemoSecp256k1Recover(instr) => {
             secp256k1::demo_secp256k1_recover(instr, accounts)?;
         }

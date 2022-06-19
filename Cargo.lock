@@ -475,6 +475,7 @@ dependencies = [
  "crossbeam-channel",
  "env_logger",
  "futures-util",
+ "hex",
  "libsecp256k1 0.6.0",
  "log",
  "rand 0.7.3",

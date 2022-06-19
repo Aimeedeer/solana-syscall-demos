@@ -8,16 +8,12 @@ use solana_sdk::{
     instruction::Instruction,
     keccak,
     secp256k1_instruction::{
-        self,
-        SecpSignatureOffsets,
-        HASHED_PUBKEY_SERIALIZED_SIZE,
-        SIGNATURE_OFFSETS_SERIALIZED_SIZE,
-        SIGNATURE_SERIALIZED_SIZE,
+        self, SecpSignatureOffsets, HASHED_PUBKEY_SERIALIZED_SIZE,
+        SIGNATURE_OFFSETS_SERIALIZED_SIZE, SIGNATURE_SERIALIZED_SIZE,
     },
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
-
 
 /// The key we'll sign secp256k1 transactions with,
 /// and our program will verify.
@@ -223,10 +219,7 @@ pub fn demo_secp256k1_recover(
 
     let signature = signature.serialize();
 
-    assert_eq!(
-        signature.len(),
-        SIGNATURE_SERIALIZED_SIZE
-    );
+    assert_eq!(signature.len(), SIGNATURE_SERIALIZED_SIZE);
 
     let instr = DemoSecp256k1RecoverInstruction {
         message: message.to_vec(),

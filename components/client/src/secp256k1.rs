@@ -6,10 +6,18 @@ use common::{
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     instruction::Instruction,
-    keccak, secp256k1_instruction,
+    keccak,
+    secp256k1_instruction::{
+        self,
+        SecpSignatureOffsets,
+        HASHED_PUBKEY_SERIALIZED_SIZE,
+        SIGNATURE_OFFSETS_SERIALIZED_SIZE,
+        SIGNATURE_SERIALIZED_SIZE,
+    },
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
+
 
 /// The key we'll sign secp256k1 transactions with,
 /// and our program will verify.
@@ -116,10 +124,11 @@ pub fn demo_secp256k1_custom_many(
     Ok(())
 }
 
+/// A struct to hold the values specified in the `SecpSignatureOffsets` struct.
 pub struct SecpSignature {
-    pub signature: [u8; 64],
+    pub signature: [u8; SIGNATURE_SERIALIZED_SIZE],
     pub recovery_id: u8,
-    pub eth_address: [u8; 20],
+    pub eth_address: [u8; HASHED_PUBKEY_SERIALIZED_SIZE],
     pub message: Vec<u8>,
 }
 
@@ -133,11 +142,6 @@ fn make_secp256k1_instruction_data(
     signatures: &[SecpSignature],
     instruction_index: u8,
 ) -> Result<Vec<u8>> {
-    use secp256k1_instruction::SecpSignatureOffsets;
-    use secp256k1_instruction::HASHED_PUBKEY_SERIALIZED_SIZE;
-    use secp256k1_instruction::SIGNATURE_OFFSETS_SERIALIZED_SIZE;
-    use secp256k1_instruction::SIGNATURE_SERIALIZED_SIZE;
-
     assert!(signatures.len() <= u8::max_value().into());
 
     // We're going to pack all the signatures into the secp256k1 instruction data.
@@ -221,7 +225,7 @@ pub fn demo_secp256k1_recover(
 
     assert_eq!(
         signature.len(),
-        secp256k1_instruction::SIGNATURE_SERIALIZED_SIZE
+        SIGNATURE_SERIALIZED_SIZE
     );
 
     let instr = DemoSecp256k1RecoverInstruction {

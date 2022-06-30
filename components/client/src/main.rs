@@ -3,6 +3,7 @@ use clap::Parser;
 use log::info;
 use solana_sdk::signature::Signer;
 
+mod ed25519;
 mod invoke;
 mod pubsub_client;
 mod pubsub_client_async;
@@ -25,6 +26,7 @@ enum Command {
     DemoSecp256k1VerifyBasic,
     DemoSecp256k1CustomMany,
     DemoSecp256k1Recover,
+    DemoEd25519,
     DemoInvoke,
     DemoPubsubClient,
     DemoPubsubClientAsync,
@@ -67,6 +69,9 @@ fn main() -> Result<()> {
         }
         Command::DemoSecp256k1Recover => {
             secp256k1::demo_secp256k1_recover(&config, &client, &program_keypair)?;
+        }
+        Command::DemoEd25519 => {
+            ed25519::demo_new_instruction(&config, &client, &program_keypair)?;
         }
         Command::DemoInvoke => {
             invoke::demo_invoke(&config, &client, &program_keypair)?;

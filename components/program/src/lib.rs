@@ -4,6 +4,7 @@ use solana_program::{
     account_info::AccountInfo, entrypoint, entrypoint::ProgramResult, pubkey::Pubkey,
 };
 
+mod ed25519;
 mod invoke;
 mod secp256k1;
 mod sysvars;
@@ -32,6 +33,9 @@ fn process_instruction(
         }
         CustomInstruction::DemoSecp256k1Recover(instr) => {
             secp256k1::demo_secp256k1_recover(instr, accounts)?;
+        }
+        CustomInstruction::DemoEd25519(instr) => {
+            ed25519::demo_ed25519(program_id, instr, accounts)?;
         }
         CustomInstruction::DemoInvoke(instr) => {
             invoke::demo_invoke(program_id, instr, accounts)?;

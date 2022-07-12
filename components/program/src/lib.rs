@@ -35,7 +35,7 @@ fn process_instruction(
             secp256k1::demo_secp256k1_recover(instr, accounts)?;
         }
         CustomInstruction::DemoEd25519(instr) => {
-            ed25519::demo_ed25519(program_id, instr, accounts)?;
+            ed25519::demo_ed25519(instr, accounts)?;
         }
         CustomInstruction::DemoInvoke(instr) => {
             invoke::demo_invoke(program_id, instr, accounts)?;

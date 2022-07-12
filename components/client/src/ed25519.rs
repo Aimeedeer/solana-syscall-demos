@@ -3,31 +3,36 @@ use common::DemoEd25519Instruction;
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     ed25519_instruction,
-    feature_set::FeatureSet,
-    instruction::Instruction,
-    precompiles::PrecompileError,
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
-use std::sync::Arc;
 
-use ed25519_dalek::{
-    ed25519::signature::Signature as Ed25519Signature, Keypair as Ed25519Keypair,
-    Signer as Ed25519Signer, Verifier,
-};
-use rand::rngs::OsRng;
+use ed25519_dalek::{Keypair as Ed25519Keypair, Signer as Ed25519Signer, KEYPAIR_LENGTH};
 
-pub fn demo_via_ed25519_program(
+const ED25519_KEYPAIR: [u8; KEYPAIR_LENGTH] = [
+    200, 44, 197, 236, 56, 17, 29, 59, 168, 204, 169, 156, 9, 18, 216, 0, 165, 242, 19, 167, 30,
+    32, 68, 205, 83, 19, 195, 87, 198, 224, 114, 103, 211, 210, 72, 176, 173, 140, 129, 224, 36,
+    99, 29, 4, 141, 117, 74, 94, 173, 213, 199, 210, 26, 108, 206, 227, 55, 76, 126, 162, 14, 112,
+    100, 112,
+];
+
+pub fn demo_ed25519_instruction(
     config: &crate::util::Config,
     client: &RpcClient,
     program_keypair: &Keypair,
 ) -> Result<()> {
-    let instr = DemoEd25519Instruction.build_instruction(&program_keypair.pubkey());
-    let ed25519_instr = todo!();
+    let message: &[u8] = b"This is a demo message.";
+
+    let keypair = Ed25519Keypair::from_bytes(&ED25519_KEYPAIR)?;
+    let _signature = keypair.sign(message);
+
+    let ed25519_instr = ed25519_instruction::new_ed25519_instruction(&keypair, message);
+    let program_instr = DemoEd25519Instruction.build_instruction(&program_keypair.pubkey());
 
     let blockhash = client.get_latest_blockhash()?;
+
     let tx = Transaction::new_signed_with_payer(
-        &[ed25519_instr, instr],
+        &[ed25519_instr, program_instr],
         Some(&config.keypair.pubkey()),
         &[&config.keypair],
         blockhash,
@@ -35,41 +40,6 @@ pub fn demo_via_ed25519_program(
 
     let sig = client.send_and_confirm_transaction(&tx)?;
     println!("sig: {}", sig);
-
-    Ok(())
-}
-
-pub fn demo_new_instruction_and_verify(
-    config: &crate::util::Config,
-    client: &RpcClient,
-    program_keypair: &Keypair,
-) -> Result<()> {
-    let mut csprng = OsRng {};
-    let keypair: Ed25519Keypair = Ed25519Keypair::generate(&mut csprng);
-
-    let message: &[u8] = b"This is a demo message.";
-    let signature = keypair.sign(message);
-
-    let instruction = ed25519_instruction::new_ed25519_instruction(&keypair, message);
-    println!(
-        "ed25519_instruction program id: {:#?}",
-        instruction.program_id
-    );
-    assert_eq!(instruction.program_id, solana_sdk::ed25519_program::id());
-
-    let ok = ed25519_instruction::verify(
-        &instruction.data,
-        &[&[0u8; 100]],
-        &Arc::new(FeatureSet::all_enabled()),
-    );
-    assert_eq!(ok, Ok(()));
-
-    let err = ed25519_instruction::verify(
-        &message,
-        &[&[0u8; 100]],
-        &Arc::new(FeatureSet::all_enabled()),
-    );
-    assert_eq!(err, Err(PrecompileError::InvalidInstructionDataSize));
 
     Ok(())
 }

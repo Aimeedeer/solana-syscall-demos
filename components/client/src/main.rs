@@ -71,7 +71,7 @@ fn main() -> Result<()> {
             secp256k1::demo_secp256k1_recover(&config, &client, &program_keypair)?;
         }
         Command::DemoEd25519 => {
-            ed25519::demo_new_instruction_and_verify(&config, &client, &program_keypair)?;
+            ed25519::demo_ed25519_instruction(&config, &client, &program_keypair)?;
         }
         Command::DemoInvoke => {
             invoke::demo_invoke(&config, &client, &program_keypair)?;

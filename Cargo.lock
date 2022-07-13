@@ -1981,6 +1981,7 @@ dependencies = [
  "bytemuck",
  "common",
  "ed25519-dalek",
+ "getrandom 0.1.16",
  "hex",
  "libsecp256k1 0.7.0",
  "serde",

@@ -17,3 +17,5 @@ serde_derive = "1.0.103"
 libsecp256k1 = { version = "0.7.0", default-features = false }
 ed25519-dalek = "1.0.1"
 bytemuck = { version = "1.10.0", features = ["derive"] }
+getrandom = { version = "0.1.14", features = ["dummy"] }
+# getrandom = { version = "0.2.2", features = ["custom"] }

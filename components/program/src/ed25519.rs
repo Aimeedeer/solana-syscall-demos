@@ -38,11 +38,8 @@ mod ed25519_defs {
             .get(0)
             .ok_or(ProgramError::InvalidArgument)?;
 
-        use solana_program::msg;
-        msg!("printttttttttttttttttttttt");
-        msg!("num_signature: {}", num_signature);
         let instr_data_slice = ed25519_instr_data
-            .get(1..)
+            .get(2..)
             .ok_or(ProgramError::InvalidArgument)?;
 
         fn decode_u16(chunk: &[u8], index: usize) -> u16 {
@@ -50,16 +47,15 @@ mod ed25519_defs {
         }
 
         let offsets = Ed25519SignatureOffsets {
-            signature_offset: decode_u16(instr_data_slice, 2),
-            signature_instruction_index: decode_u16(instr_data_slice, 4),
-            public_key_offset: decode_u16(instr_data_slice, 6),
-            public_key_instruction_index: decode_u16(instr_data_slice, 8),
-            message_data_offset: decode_u16(instr_data_slice, 10),
-            message_data_size: decode_u16(instr_data_slice, 12),
-            message_instruction_index: decode_u16(instr_data_slice, 14),
+            signature_offset: decode_u16(instr_data_slice, 0),
+            signature_instruction_index: decode_u16(instr_data_slice, 2),
+            public_key_offset: decode_u16(instr_data_slice, 4),
+            public_key_instruction_index: decode_u16(instr_data_slice, 6),
+            message_data_offset: decode_u16(instr_data_slice, 8),
+            message_data_size: decode_u16(instr_data_slice, 10),
+            message_instruction_index: decode_u16(instr_data_slice, 12),
         };
 
-        msg!("offsets: {:?}", offsets);
         Ok(offsets)
     }
 }
@@ -95,7 +91,6 @@ pub fn demo_ed25519(
     let num_signatures = ed25519_instr.data[0];
     assert_eq!(1, num_signatures);
 
-    // ?? for i in 0..num_signatures {
     let start = usize::from(num_signatures)
         .saturating_mul(SIGNATURE_OFFSETS_SERIALIZED_SIZE)
         .saturating_add(SIGNATURE_OFFSETS_START);
@@ -130,5 +125,10 @@ pub fn demo_ed25519(
     msg!("ed25519_instr_message: {:?}", ed25519_instr_message);
     msg!("expected_message: {:?}", expected_message);
 
+    assert_eq!(
+        ed25519_instr_message,
+        expected_message,
+    );
+    
     Ok(())
 }

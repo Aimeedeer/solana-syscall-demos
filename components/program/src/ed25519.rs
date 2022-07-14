@@ -38,27 +38,29 @@ mod ed25519_defs {
             .get(0)
             .ok_or(ProgramError::InvalidArgument)?;
 
-        let public_key_offset = DATA_START;
-        let signature_offset = public_key_offset.saturating_add(PUBKEY_SERIALIZED_SIZE);
-        let message_data_offset = signature_offset.saturating_add(SIGNATURE_SERIALIZED_SIZE);
+        use solana_program::msg;
+        msg!("printttttttttttttttttttttt");
+        msg!("num_signature: {}", num_signature);
+        let instr_data_slice = ed25519_instr_data
+            .get(1..)
+            .ok_or(ProgramError::InvalidArgument)?;
 
         fn decode_u16(chunk: &[u8], index: usize) -> u16 {
             u16::from_le_bytes(<[u8; 2]>::try_from(&chunk[index..index + 2]).unwrap())
         }
 
-        let message_data_size = u16::from_le_bytes(
-            <[u8; 2]>::try_from(&ed25519_instr_data[message_data_offset..]).unwrap(),
-        );
+        let offsets = Ed25519SignatureOffsets {
+            signature_offset: decode_u16(instr_data_slice, 2),
+            signature_instruction_index: decode_u16(instr_data_slice, 4),
+            public_key_offset: decode_u16(instr_data_slice, 6),
+            public_key_instruction_index: decode_u16(instr_data_slice, 8),
+            message_data_offset: decode_u16(instr_data_slice, 10),
+            message_data_size: decode_u16(instr_data_slice, 12),
+            message_instruction_index: decode_u16(instr_data_slice, 14),
+        };
 
-        Ok(Ed25519SignatureOffsets {
-            signature_offset: signature_offset as u16,
-            signature_instruction_index: u16::MAX,
-            public_key_offset: public_key_offset as u16,
-            public_key_instruction_index: u16::MAX,
-            message_data_offset: message_data_offset as u16,
-            message_data_size: message_data_size as u16,
-            message_instruction_index: u16::MAX,
-        })
+        msg!("offsets: {:?}", offsets);
+        Ok(offsets)
     }
 }
 

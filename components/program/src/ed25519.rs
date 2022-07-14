@@ -30,7 +30,7 @@ mod ed25519_defs {
         pub message_instruction_index: u16, // index of instruction data to get message data
     }
 
-    pub fn iter_signature_offsets(
+    pub fn get_signature_offsets(
         ed25519_instr_data: &[u8],
     ) -> Result<Ed25519SignatureOffsets, ProgramError> {
         // First element is the number of num_signatures
@@ -96,7 +96,7 @@ pub fn demo_ed25519(
         .saturating_add(SIGNATURE_OFFSETS_START);
     let end = start.saturating_add(SIGNATURE_OFFSETS_SERIALIZED_SIZE);
 
-    let offsets = ed25519_defs::iter_signature_offsets(&ed25519_instr.data)?;
+    let offsets = ed25519_defs::get_signature_offsets(&ed25519_instr.data)?;
     msg!("offsets: {:#?}", offsets);
 
     let pubkey_start = usize::from(offsets.public_key_offset);

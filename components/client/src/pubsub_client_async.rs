@@ -98,7 +98,7 @@ pub fn demo_pubsub_client_async(
             let pubsub_client = Arc::clone(&pubsub_client);
             async move {
                 let (mut slot_notifications, slot_unsubscribe) =
-                    pubsub_client.slot_subscribe().await.unwrap();
+                    pubsub_client.slot_subscribe().await?;
 
                 ready_sender.send(()).unwrap();
 
@@ -109,6 +109,8 @@ pub fn demo_pubsub_client_async(
                 while let Some(slot_info) = slot_notifications.next().await {
                     slot_sender.send(slot_info).unwrap();
                 }
+
+                Ok::<_, anyhow::Error>(())
             }
         });
 
@@ -143,8 +145,7 @@ pub fn demo_pubsub_client_async(
                             }),
                         },
                     )
-                    .await
-                    .unwrap();
+                    .await?;
 
                 ready_sender.send(()).unwrap();
                 if let Err(_) = logs_unsubscribe_sender.send(logs_unsubscribe) {
@@ -154,6 +155,8 @@ pub fn demo_pubsub_client_async(
                 while let Some(logs) = logs_notifications.next().await {
                     logs_sender.send(logs).unwrap();
                 }
+
+                Ok::<_, anyhow::Error>(())
             }
         });
 
@@ -197,8 +200,7 @@ pub fn demo_pubsub_client_async(
                             max_supported_transaction_version: None,
                         }),
                     )
-                    .await
-                    .unwrap();
+                    .await?;
 
                 ready_sender.send(()).unwrap();
                 if let Err(_) = block_unsubscribe_sender.send(block_unsubscribe) {
@@ -208,6 +210,8 @@ pub fn demo_pubsub_client_async(
                 while let Some(block) = block_notifications.next().await {
                     block_sender.send(block).unwrap();
                 }
+
+                Ok::<_, anyhow::Error>(())
             }
         });
 
@@ -223,8 +227,7 @@ pub fn demo_pubsub_client_async(
                             ..RpcProgramAccountsConfig::default()
                         }),
                     )
-                    .await
-                    .unwrap();
+                    .await?;
 
                 ready_sender.send(()).unwrap();
                 if let Err(_) = program_unsubscribe_sender.send(program_unsubscribe) {
@@ -234,6 +237,8 @@ pub fn demo_pubsub_client_async(
                 while let Some(program) = program_notifications.next().await {
                     program_sender.send(program).unwrap();
                 }
+
+                Ok::<_, anyhow::Error>(())
             }
         });
 
@@ -249,8 +254,7 @@ pub fn demo_pubsub_client_async(
                             ..RpcAccountInfoConfig::default()
                         }),
                     )
-                    .await
-                    .unwrap();
+                    .await?;
 
                 ready_sender.send(()).unwrap();
 
@@ -261,6 +265,8 @@ pub fn demo_pubsub_client_async(
                 while let Some(account) = account_notifications.next().await {
                     account_sender.send(account).unwrap();
                 }
+
+                Ok::<_, anyhow::Error>(())
             }
         });
 
@@ -274,7 +280,7 @@ pub fn demo_pubsub_client_async(
             let pubsub_client = Arc::clone(&pubsub_client);
             async move {
                 let (mut vote_notifications, vote_unsubscribe) =
-                    pubsub_client.vote_subscribe().await.unwrap();
+                    pubsub_client.vote_subscribe().await?;
 
                 ready_sender.send(()).unwrap();
 
@@ -285,6 +291,8 @@ pub fn demo_pubsub_client_async(
                 while let Some(vote) = vote_notifications.next().await {
                     vote_sender.send(vote).unwrap();
                 }
+
+                Ok::<_, anyhow::Error>(())
             }
         });
 
@@ -307,8 +315,7 @@ pub fn demo_pubsub_client_async(
                                     ..RpcSignatureSubscribeConfig::default()
                                 }),
                             )
-                            .await
-                            .unwrap();
+                            .await?;
 
                         ready_sender.send(()).unwrap();
                         if let Err(_) = signature_unsubscribe_sender
@@ -321,6 +328,8 @@ pub fn demo_pubsub_client_async(
                         while let Some(sig_response) = signature_notifications.next().await {
                             signature_sender.send((signature, sig_response)).unwrap();
                         }
+
+                        Ok::<_, anyhow::Error>(())
                     }
                 });
             }

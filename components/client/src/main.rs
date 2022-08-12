@@ -83,7 +83,6 @@ fn main() -> Result<()> {
             pubsub_client_async::demo_pubsub_client_async(
                 &config,
                 client,
-                &program_keypair,
             )?;
         }
     }

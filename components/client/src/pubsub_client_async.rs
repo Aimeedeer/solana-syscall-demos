@@ -1,12 +1,5 @@
-#![allow(unused)]
-
 use anyhow::Result;
 use futures_util::StreamExt;
-use solana_account_decoder::UiAccount;
-use solana_client::rpc_response::{
-    Response, RpcBlockUpdate, RpcKeyedAccount, RpcLogsResponse, RpcSignatureResult, RpcVote,
-    SlotInfo, SlotUpdate,
-};
 use solana_client::{
     nonblocking::pubsub_client::PubsubClient,
     rpc_client::RpcClient,
@@ -18,10 +11,8 @@ use solana_client::{
 };
 use solana_sdk::{
     commitment_config::{CommitmentConfig, CommitmentLevel},
-    rpc_port,
     signature::Signature,
-    signature::{Keypair, Signer},
-    slot_history::Slot,
+    signature::Signer,
     system_program, system_transaction,
     sysvar::rent::Rent,
     transaction::Transaction,
@@ -31,11 +22,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 use tokio::runtime::Runtime;
-use tokio::sync::mpsc::{channel, unbounded_channel};
-use tokio::sync::oneshot;
-use tokio::task;
-use tokio::time::sleep;
-use tokio::time::Duration;
+use tokio::sync::mpsc::unbounded_channel;
 use crate::util::Config;
 
 /// Demo all async `PubsubClient` subscriptions.
@@ -48,7 +35,6 @@ use crate::util::Config;
 pub fn demo_pubsub_client_async(
     config: &Config,
     rpc_client: RpcClient,
-    program_keypair: &Keypair,
 ) -> Result<()> {
     let rt = Runtime::new()?;
 
@@ -56,7 +42,7 @@ pub fn demo_pubsub_client_async(
         let mut stdin = tokio::io::stdin();
 
         println!("press any key to begin, then press another key to end");
-        stdin.read_u8().await;
+        let _ = stdin.read_u8().await;
 
         // Subscription tasks will send a ready signal when they have subscribed.
         let (ready_sender, mut ready_receiver) = unbounded_channel::<()>();
@@ -80,7 +66,7 @@ pub fn demo_pubsub_client_async(
                 )
             })
             .collect();
-        let mut signatures: HashSet<Signature> =
+        let signatures: HashSet<Signature> =
             transactions.iter().map(|tx| tx.signatures[0]).collect();
 
         let config_pubkey = config.keypair.pubkey();
@@ -374,7 +360,7 @@ pub fn demo_pubsub_client_async(
         }
 
         // Wait for input.
-        stdin.read_u8().await;
+        let _ = stdin.read_u8().await;
 
         // Unsubscribe from everything, which will shutdown all the tasks.
         while let Some((unsubscribe, name)) = unsubscribe_receiver.recv().await {

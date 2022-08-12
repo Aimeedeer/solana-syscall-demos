@@ -42,7 +42,7 @@ pub fn demo_pubsub_client_async(
         let mut stdin = tokio::io::stdin();
 
         println!("press any key to begin, then press another key to end");
-        let _ = stdin.read_u8().await;
+        stdin.read_u8().await?;
 
         // Subscription tasks will send a ready signal when they have subscribed.
         let (ready_sender, mut ready_receiver) = unbounded_channel::<()>();
@@ -55,7 +55,7 @@ pub fn demo_pubsub_client_async(
         // Test transactions for signature subscriptions.
         // We'll send these after all the subscriptions are running.
         let transfer_amount = Rent::default().minimum_balance(0);
-        let recent_blockhash = rpc_client.get_latest_blockhash().unwrap();
+        let recent_blockhash = rpc_client.get_latest_blockhash()?;
         let transactions: Vec<Transaction> = (0..5)
             .map(|_| {
                 system_transaction::transfer(
@@ -72,7 +72,7 @@ pub fn demo_pubsub_client_async(
         let config_pubkey = config.keypair.pubkey();
 
         // The `PubsubClient` must be `Arc`ed to share it across tasks.
-        let pubsub_client = Arc::new(PubsubClient::new(&config.websocket_url).await.unwrap());
+        let pubsub_client = Arc::new(PubsubClient::new(&config.websocket_url).await?);
 
         let mut join_handles = vec![];
 
@@ -355,12 +355,12 @@ pub fn demo_pubsub_client_async(
 
         println!("sending test transactions");
         for tx in transactions {
-            let sig = rpc_client.send_and_confirm_transaction(&tx).unwrap();
+            let sig = rpc_client.send_and_confirm_transaction(&tx)?;
             println!("transfer sig: {}", sig);
         }
 
         // Wait for input.
-        let _ = stdin.read_u8().await;
+        stdin.read_u8().await?;
 
         // Unsubscribe from everything, which will shutdown all the tasks.
         while let Some((unsubscribe, name)) = unsubscribe_receiver.recv().await {
@@ -375,7 +375,9 @@ pub fn demo_pubsub_client_async(
                 println!("task {} failed: {}", name, e);
             }
         }
-    });
+
+        Ok::<_, anyhow::Error>(())
+    })?;
 
     Ok(())
 }

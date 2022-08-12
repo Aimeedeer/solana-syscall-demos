@@ -29,55 +29,51 @@ use solana_sdk::{
 use solana_transaction_status::{TransactionDetails, UiTransactionEncoding};
 use std::collections::HashSet;
 use std::sync::Arc;
+use tokio::io::AsyncReadExt;
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc::{channel, unbounded_channel};
 use tokio::sync::oneshot;
 use tokio::task;
 use tokio::time::sleep;
 use tokio::time::Duration;
+use crate::util::Config;
 
+/// Demo all async `PubsubClient` subscriptions.
+///
+/// This creates a tokio runtime,
+/// spawn a task for every subscription type,
+/// which subscribes and sends back a ready message and an unsubscribe channel (closure),
+/// then loops on printing messages.
+/// The main task then waits for user input before unsubscribing and waiting on the tasks.
 pub fn demo_pubsub_client_async(
-    config_keypair: Keypair,
+    config: &Config,
     rpc_client: RpcClient,
     program_keypair: &Keypair,
 ) -> Result<()> {
     let rt = Runtime::new()?;
 
     rt.block_on(async move {
-        // Track when subscriptions are ready
+        let mut stdin = tokio::io::stdin();
+
+        println!("press any key to begin, then press another key to end");
+        stdin.read_u8().await;
+
+        // Subscription tasks will send a ready signal when they have subscribed.
         let (ready_sender, mut ready_receiver) = unbounded_channel::<()>();
 
-        let (slot_sender, mut slot_receiver) = unbounded_channel::<SlotInfo>();
-        let (slot_updates_sender, mut slot_updates_receiver) = unbounded_channel::<SlotUpdate>();
-        let (logs_sender, mut logs_receiver) = unbounded_channel::<Response<RpcLogsResponse>>();
-        let (root_sender, mut root_receiver) = unbounded_channel::<Slot>();
-        let (block_sender, mut block_receiver) = unbounded_channel::<Response<RpcBlockUpdate>>();
-        let (program_sender, mut program_receiver) =
-            unbounded_channel::<Response<RpcKeyedAccount>>();
-        let (account_sender, mut account_receiver) = unbounded_channel::<Response<UiAccount>>();
-        let (vote_sender, mut vote_receiver) = unbounded_channel::<RpcVote>();
-        let (signature_sender, mut signature_receiver) =
-            unbounded_channel::<(Signature, Response<RpcSignatureResult>)>();
+        // Channel to receive unsubscribe channels (actually closures).
+        // These receive a pair of `(Box<dyn FnOnce() -> BoxFuture<'static, ()> + Send>), &'static str)`,
+        // where the first is a closure to call to unsubsribe, the second is the subscription name.
+        let (unsubscribe_sender, mut unsubscribe_receiver) = unbounded_channel::<(_, &'static str)>();
 
-        // channels for unsubscribe
-        let (slot_unsubscribe_sender, mut slot_unsubscribe_receiver) = oneshot::channel();
-        let (slot_updates_unsubscribe_sender, mut slot_updates_unsubscribe_receiver) =
-            oneshot::channel();
-        let (logs_unsubscribe_sender, mut logs_unsubscribe_receiver) = oneshot::channel();
-        let (root_unsubscribe_sender, mut root_unsubscribe_receiver) = oneshot::channel();
-        let (block_unsubscribe_sender, mut block_unsubscribe_receiver) = oneshot::channel();
-        let (program_unsubscribe_sender, mut program_unsubscribe_receiver) = oneshot::channel();
-        let (account_unsubscribe_sender, mut account_unsubscribe_receiver) = oneshot::channel();
-        let (vote_unsubscribe_sender, mut vote_unsubscribe_receiver) = oneshot::channel();
-        let (signature_unsubscribe_sender, mut signature_unsubscribe_receiver) = channel(5);
-
-        // transactions for test
+        // Test transactions for signature subscriptions.
+        // We'll send these after all the subscriptions are running.
         let transfer_amount = Rent::default().minimum_balance(0);
         let recent_blockhash = rpc_client.get_latest_blockhash().unwrap();
         let transactions: Vec<Transaction> = (0..5)
             .map(|_| {
                 system_transaction::transfer(
-                    &config_keypair,
+                    &config.keypair,
                     &solana_sdk::pubkey::new_rand(),
                     transfer_amount,
                     recent_blockhash,
@@ -87,53 +83,70 @@ pub fn demo_pubsub_client_async(
         let mut signatures: HashSet<Signature> =
             transactions.iter().map(|tx| tx.signatures[0]).collect();
 
-        let config_pubkey = config_keypair.pubkey();
+        let config_pubkey = config.keypair.pubkey();
 
-        // let ws_url = "wss://api.devnet.solana.com/";
-        let ws_url = &format!("ws://127.0.0.1:{}/", rpc_port::DEFAULT_RPC_PUBSUB_PORT);
-        let pubsub_client = Arc::new(PubsubClient::new(ws_url).await.unwrap());
+        // The `PubsubClient` must be `Arc`ed to share it across tasks.
+        let pubsub_client = Arc::new(PubsubClient::new(&config.websocket_url).await.unwrap());
 
-        let task_slot_subscribe = tokio::spawn({
+        let mut join_handles = vec![];
+
+        join_handles.push(("slot", tokio::spawn({
+            // Clone things we need before moving their clones into the `async move` block.
+            //
+            // The subscriptions have to be made from the tasks that will receive the subscription messages,
+            // because the subscription streams hold a reference to the `PubsubClient`.
+            // Otherwise we would just subscribe on the main task and send the receivers out to other tasks.
+
             let ready_sender = ready_sender.clone();
+            let unsubscribe_sender = unsubscribe_sender.clone();
             let pubsub_client = Arc::clone(&pubsub_client);
             async move {
                 let (mut slot_notifications, slot_unsubscribe) =
                     pubsub_client.slot_subscribe().await?;
 
-                ready_sender.send(()).unwrap();
+                // Report back to the main thread and drop our senders so that the channels can close.
+                ready_sender.send(()).expect("channel");
+                unsubscribe_sender.send((slot_unsubscribe, "slot"))
+                    .map_err(|e| format!("{}", e)).expect("channel");
+                drop((ready_sender, unsubscribe_sender));
 
-                if let Err(_) = slot_unsubscribe_sender.send(slot_unsubscribe) {
-                    println!("slot_unsubscribe receiver dropped");
+                // Do something with the subscribed messages.
+                // This loop will end once the main task unsubscribes.
+                while let Some(slot_info) = slot_notifications.next().await {
+                    println!("------------------------------------------------------------");
+                    println!("slot pubsub result: {:?}", slot_info);
                 }
 
-                while let Some(slot_info) = slot_notifications.next().await {
-                    slot_sender.send(slot_info).unwrap();
+                // This type hint is necessary to allow the `async move` block to use `?`.
+                Ok::<_, anyhow::Error>(())
+            }
+        })));
+
+        join_handles.push(("slot_updates", tokio::spawn({
+            let ready_sender = ready_sender.clone();
+            let unsubscribe_sender = unsubscribe_sender.clone();
+            let pubsub_client = Arc::clone(&pubsub_client);
+            async move {
+                let (mut slot_updates_notifications, slot_updates_unsubscribe) =
+                    pubsub_client.slot_updates_subscribe().await?;
+
+                ready_sender.send(()).expect("channel");
+                unsubscribe_sender.send((slot_updates_unsubscribe, "slot_updates"))
+                    .map_err(|e| format!("{}", e)).expect("channel");
+                drop((ready_sender, unsubscribe_sender));
+
+                while let Some(slot_updates) = slot_updates_notifications.next().await {
+                    println!("------------------------------------------------------------");
+                    println!("slot_updates pubsub result: {:?}", slot_updates);
                 }
 
                 Ok::<_, anyhow::Error>(())
             }
-        });
+        })));
 
-        let task_slot_updates_subscribe = tokio::spawn({
+        join_handles.push(("logs", tokio::spawn({
             let ready_sender = ready_sender.clone();
-            let pubsub_client = Arc::clone(&pubsub_client);
-            async move {
-                let (mut slot_updates_notifications, slot_updates_unsubscribe) =
-                    pubsub_client.slot_updates_subscribe().await.unwrap();
-
-                ready_sender.send(()).unwrap();
-                if let Err(_) = slot_updates_unsubscribe_sender.send(slot_updates_unsubscribe) {
-                    println!("slot_updates_unsubscribe receiver dropped");
-                }
-
-                while let Some(slot_updates) = slot_updates_notifications.next().await {
-                    slot_updates_sender.send(slot_updates).unwrap();
-                }
-            }
-        });
-
-        let task_logs_subscribe = tokio::spawn({
-            let ready_sender = ready_sender.clone();
+            let unsubscribe_sender = unsubscribe_sender.clone();
             let pubsub_client = Arc::clone(&pubsub_client);
             async move {
                 let (mut logs_notifications, logs_unsubscribe) = pubsub_client
@@ -147,44 +160,62 @@ pub fn demo_pubsub_client_async(
                     )
                     .await?;
 
-                ready_sender.send(()).unwrap();
-                if let Err(_) = logs_unsubscribe_sender.send(logs_unsubscribe) {
-                    println!("logs_unsubscribe receiver dropped");
-                }
+                ready_sender.send(()).expect("channel");
+                unsubscribe_sender.send((logs_unsubscribe, "logs"))
+                    .map_err(|e| format!("{}", e)).expect("channel");
+                drop((ready_sender, unsubscribe_sender));
+
 
                 while let Some(logs) = logs_notifications.next().await {
-                    logs_sender.send(logs).unwrap();
+                    println!("------------------------------------------------------------");
+                    println!("logs pubsub result:");
+
+                    println!("Transaction executed in slot {}:", logs.context.slot);
+                    println!("  Signature: {}", logs.value.signature);
+                    println!(
+                        "  Status: {}",
+                        logs.value
+                            .err
+                            .map(|err| err.to_string())
+                            .unwrap_or_else(|| "Ok".to_string())
+                    );
+                    println!("  Log Messages:");
+                    for log in logs.value.logs {
+                        println!("    {}", log);
+                    }
                 }
 
                 Ok::<_, anyhow::Error>(())
             }
-        });
+        })));
 
-        let task_root_subscribe = tokio::spawn({
+        join_handles.push(("root", tokio::spawn({
             let ready_sender = ready_sender.clone();
+            let unsubscribe_sender = unsubscribe_sender.clone();
             let pubsub_client = Arc::clone(&pubsub_client);
             async move {
                 let (mut root_notifications, root_unsubscribe) =
-                    pubsub_client.root_subscribe().await.unwrap();
+                    pubsub_client.root_subscribe().await?;
 
-                ready_sender.send(()).unwrap();
-                if let Err(_) = root_unsubscribe_sender.send(root_unsubscribe) {
-                    println!("root_unsubscribe receiver dropped");
-                }
+                ready_sender.send(()).expect("channel");
+                unsubscribe_sender.send((root_unsubscribe, "root"))
+                    .map_err(|e| format!("{}", e)).expect("channel");
+                drop((ready_sender, unsubscribe_sender));
 
                 while let Some(root) = root_notifications.next().await {
-                    root_sender.send(root).unwrap();
+                    println!("------------------------------------------------------------");
+                    println!("root pubsub result: {:?}", root);
                 }
-            }
-        });
 
-        // thread 'tokio-runtime-worker' panicked at 'called
-        // `Result::unwrap()` on an `Err` value: SubscribeFailed {
-        // reason: "Method not found (-32601)", message:
-        // "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32601,\"message\":\"Method
-        // not found\"},\"id\":8}" }',
-        let task_block_subscribe = tokio::spawn({
+                Ok::<_, anyhow::Error>(())
+            }
+        })));
+
+        // This subscription will fail unless the validator is started with
+        // `----rpc-pubsub-enable-block-subscription`.
+        join_handles.push(("block", tokio::spawn({
             let ready_sender = ready_sender.clone();
+            let unsubscribe_sender = unsubscribe_sender.clone();
             let pubsub_client = Arc::clone(&pubsub_client);
             async move {
                 let (mut block_notifications, block_unsubscribe) = pubsub_client
@@ -202,22 +233,24 @@ pub fn demo_pubsub_client_async(
                     )
                     .await?;
 
-                ready_sender.send(()).unwrap();
-                if let Err(_) = block_unsubscribe_sender.send(block_unsubscribe) {
-                    println!("block_unsubscribe receiver dropped");
-                }
+                ready_sender.send(()).expect("channel");
+                unsubscribe_sender.send((block_unsubscribe, "block"))
+                    .map_err(|e| format!("{}", e)).expect("channel");
+                drop((ready_sender, unsubscribe_sender));
 
                 while let Some(block) = block_notifications.next().await {
-                    block_sender.send(block).unwrap();
+                    println!("------------------------------------------------------------");
+                    println!("block pubsub result: {:?}", block);
                 }
 
                 Ok::<_, anyhow::Error>(())
             }
-        });
+        })));
 
         // don't see the result from localhost/devnet
-        let task_program_subscribe = tokio::spawn({
+        join_handles.push(("program", tokio::spawn({
             let ready_sender = ready_sender.clone();
+            let unsubscribe_sender = unsubscribe_sender.clone();
             let pubsub_client = Arc::clone(&pubsub_client);
             async move {
                 let (mut program_notifications, program_unsubscribe) = pubsub_client
@@ -229,21 +262,23 @@ pub fn demo_pubsub_client_async(
                     )
                     .await?;
 
-                ready_sender.send(()).unwrap();
-                if let Err(_) = program_unsubscribe_sender.send(program_unsubscribe) {
-                    println!("program_unsubscribe receiver dropped");
-                }
+                ready_sender.send(()).expect("channel");
+                unsubscribe_sender.send((program_unsubscribe, "program"))
+                    .map_err(|e| format!("{}", e)).expect("channel");
+                drop((ready_sender, unsubscribe_sender));
 
                 while let Some(program) = program_notifications.next().await {
-                    program_sender.send(program).unwrap();
+                    println!("------------------------------------------------------------");
+                    println!("program pubsub result: {:?}", program);
                 }
 
                 Ok::<_, anyhow::Error>(())
             }
-        });
+        })));
 
-        let task_account_subscribe = tokio::spawn({
+        join_handles.push(("account", tokio::spawn({
             let ready_sender = ready_sender.clone();
+            let unsubscribe_sender = unsubscribe_sender.clone();
             let pubsub_client = Arc::clone(&pubsub_client);
             async move {
                 let (mut account_notifications, account_unsubscribe) = pubsub_client
@@ -256,339 +291,104 @@ pub fn demo_pubsub_client_async(
                     )
                     .await?;
 
-                ready_sender.send(()).unwrap();
-
-                if let Err(_) = account_unsubscribe_sender.send(account_unsubscribe) {
-                    println!("account_unsubscribe receiver dropped");
-                }
+                ready_sender.send(()).expect("channel");
+                unsubscribe_sender.send((account_unsubscribe, "account"))
+                    .map_err(|e| format!("{}", e)).expect("channel");
+                drop((ready_sender, unsubscribe_sender));
 
                 while let Some(account) = account_notifications.next().await {
-                    account_sender.send(account).unwrap();
+                    println!("------------------------------------------------------------");
+                    println!("account pubsub result: {:?}", account);
                 }
 
                 Ok::<_, anyhow::Error>(())
             }
-        });
+        })));
 
-        // Thread 'Tokio-runtime-worker' panicked at 'called
-        // `Result::unwrap()` on an `Err` value: SubscribeFailed {
-        // reason: "Method not found (-32601)", message:
-        // "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32601,\"message\":\"Method
-        // not found\"},\"id\":1}" }'
-        let task_vote_subscribe = tokio::spawn({
+        // This subscription will fail unless the validator is started with
+        // `----rpc-pubsub-enable-vote-subscription`.
+        join_handles.push(("vote", tokio::spawn({
             let ready_sender = ready_sender.clone();
+            let unsubscribe_sender = unsubscribe_sender.clone();
             let pubsub_client = Arc::clone(&pubsub_client);
             async move {
                 let (mut vote_notifications, vote_unsubscribe) =
                     pubsub_client.vote_subscribe().await?;
 
-                ready_sender.send(()).unwrap();
-
-                if let Err(_) = vote_unsubscribe_sender.send(vote_unsubscribe) {
-                    println!("vote_unsubscribe receiver dropped");
-                }
+                ready_sender.send(()).expect("channel");
+                unsubscribe_sender.send((vote_unsubscribe, "vote"))
+                    .map_err(|e| format!("{}", e)).expect("channel");
+                drop((ready_sender, unsubscribe_sender));
 
                 while let Some(vote) = vote_notifications.next().await {
-                    vote_sender.send(vote).unwrap();
+                    println!("------------------------------------------------------------");
+                    println!("vote pubsub result: {:?}", vote);
                 }
 
                 Ok::<_, anyhow::Error>(())
             }
-        });
+        })));
 
-        let task_signature_subscribe = tokio::spawn(async move {
-            let ready_sender = ready_sender.clone();
-            let pubsub_client = Arc::clone(&pubsub_client);
+        for signature in signatures {
+            join_handles.push(("signature", tokio::spawn({
+                let ready_sender = ready_sender.clone();
+                let unsubscribe_sender = unsubscribe_sender.clone();
+                let pubsub_client = Arc::clone(&pubsub_client);
+                async move {
+                    let (mut signature_notifications, signature_unsubscribe) = pubsub_client
+                        .signature_subscribe(
+                            &signature,
+                            Some(RpcSignatureSubscribeConfig {
+                                commitment: Some(CommitmentConfig::confirmed()),
+                                ..RpcSignatureSubscribeConfig::default()
+                            }),
+                        )
+                        .await?;
 
-            for signature in signatures {
-                tokio::spawn({
-                    let signature_sender = signature_sender.clone();
-                    let ready_sender = ready_sender.clone();
-                    let pubsub_client = Arc::clone(&pubsub_client);
-                    let signature_unsubscribe_sender = signature_unsubscribe_sender.clone();
-                    async move {
-                        let (mut signature_notifications, signature_unsubscribe) = pubsub_client
-                            .signature_subscribe(
-                                &signature,
-                                Some(RpcSignatureSubscribeConfig {
-                                    commitment: Some(CommitmentConfig::confirmed()),
-                                    ..RpcSignatureSubscribeConfig::default()
-                                }),
-                            )
-                            .await?;
+                    ready_sender.send(()).expect("channel");
+                    unsubscribe_sender.send((signature_unsubscribe, "signature"))
+                        .map_err(|e| format!("{}", e)).expect("channel");
+                    drop((ready_sender, unsubscribe_sender));
 
-                        ready_sender.send(()).unwrap();
-                        if let Err(_) = signature_unsubscribe_sender
-                            .send(signature_unsubscribe)
-                            .await
-                        {
-                            println!("signature_unsubscribe receiver dropped");
-                        }
-
-                        while let Some(sig_response) = signature_notifications.next().await {
-                            signature_sender.send((signature, sig_response)).unwrap();
-                        }
-
-                        Ok::<_, anyhow::Error>(())
+                    while let Some(sig_response) = signature_notifications.next().await {
+                        println!("------------------------------------------------------------");
+                        println!("signature pubsub result: {:?}", sig_response);
                     }
-                });
-            }
-        });
 
-        let task_slot_receiver = task::spawn(async move {
-            loop {
-                if let Some(result) = slot_receiver.recv().await {
-                    println!("------------------------------------------------------------");
-                    println!("slot pubsub result: {:?}", result);
-                } else {
-                    break;
+                    Ok::<_, anyhow::Error>(())
                 }
-            }
-        });
-
-        let task_slot_updates_receiver = task::spawn(async move {
-            loop {
-                if let Some(result) = slot_updates_receiver.recv().await {
-                    println!("------------------------------------------------------------");
-                    println!("slot_updates pubsub result: {:?}", result);
-                } else {
-                    break;
-                }
-            }
-        });
-
-        let task_logs_receiver = task::spawn(async move {
-            loop {
-                if let Some(logs) = logs_receiver.recv().await {
-                    println!("------------------------------------------------------------");
-                    println!("logs pubsub result:");
-
-                    println!("Transaction executed in slot {}:", logs.context.slot);
-                    println!("  Signature: {}", logs.value.signature);
-                    println!(
-                        "  Status: {}",
-                        logs.value
-                            .err
-                            .map(|err| err.to_string())
-                            .unwrap_or_else(|| "Ok".to_string())
-                    );
-                    println!("  Log Messages:");
-                    for log in logs.value.logs {
-                        println!("    {}", log);
-                    }
-                } else {
-                    break;
-                }
-            }
-        });
-
-        let task_root_receiver = task::spawn(async move {
-            loop {
-                if let Some(result) = root_receiver.recv().await {
-                    println!("------------------------------------------------------------");
-                    println!("root pubsub result: {:?}", result);
-                } else {
-                    break;
-                }
-            }
-        });
-
-        let task_block_receiver = task::spawn(async move {
-            loop {
-                if let Some(result) = block_receiver.recv().await {
-                    println!("------------------------------------------------------------");
-                    println!("block pubsub result: {:?}", result);
-                } else {
-                    break;
-                }
-            }
-        });
-
-        let task_program_receiver = task::spawn(async move {
-            loop {
-                if let Some(result) = program_receiver.recv().await {
-                    println!("------------------------------------------------------------");
-                    println!("program pubsub result: {:?}", result);
-                } else {
-                    break;
-                }
-            }
-        });
-
-        let task_account_receiver = task::spawn(async move {
-            loop {
-                if let Some(result) = account_receiver.recv().await {
-                    println!("------------------------------------------------------------");
-                    println!("account pubsub result: {:?}", result);
-                } else {
-                    break;
-                }
-            }
-        });
-
-        let task_vote_receiver = task::spawn(async move {
-            loop {
-                if let Some(result) = vote_receiver.recv().await {
-                    println!("------------------------------------------------------------");
-                    println!("vote pubsub result: {:?}", result);
-                } else {
-                    break;
-                }
-            }
-        });
-
-        let task_signature_receiver = task::spawn(async move {
-            loop {
-                if let Some(result) = signature_receiver.recv().await {
-                    println!("------------------------------------------------------------");
-                    println!("signature pubsub result: {:?}", result);
-                } else {
-                    break;
-                }
-            }
-        });
-
-        // send testing txs when all subscriptions are ready
-        let task_test_tx = task::spawn(async move {
-            // signals from slot, slot_updates, logs, root, block, program, account, vote subscriptions
-            ready_receiver.recv().await;
-            ready_receiver.recv().await;
-
-            ready_receiver.recv().await;
-            ready_receiver.recv().await;
-
-            ready_receiver.recv().await;
-            ready_receiver.recv().await;
-
-            ready_receiver.recv().await;
-            ready_receiver.recv().await;
-
-            // signals from 5 test signature subscriptions
-            for i in 0..5 {
-                ready_receiver.recv().await;
-            }
-
-            println!("sending out testing transaction");
-            for tx in transactions {
-                let sig = rpc_client.send_and_confirm_transaction(&tx).unwrap();
-                println!("transfer sig: {}", sig);
-            }
-        });
-
-        // unsubscribe all
-        match slot_unsubscribe_receiver.await {
-            Ok(slot_unsubscribe) => {
-                sleep(Duration::from_secs(5)).await;
-                slot_unsubscribe().await;
-            }
-            Err(e) => {
-                println!("slot_unsubscribe_receiver error: {}", e);
-            }
+            })));
         }
 
-        match slot_updates_unsubscribe_receiver.await {
-            Ok(slot_updates_unsubscribe) => {
-                sleep(Duration::from_secs(5)).await;
-                slot_updates_unsubscribe().await;
-            }
-            Err(e) => {
-                println!("slot_updates_unsubscribe_receiver error: {}", e);
-            }
+        // Drop these senders so that their receivers return `None` below.
+        drop(ready_sender);
+        drop(unsubscribe_sender);
+
+        // Wait until all subscribers are ready.
+        while let Some(_) = ready_receiver.recv().await { }
+
+        println!("sending test transactions");
+        for tx in transactions {
+            let sig = rpc_client.send_and_confirm_transaction(&tx).unwrap();
+            println!("transfer sig: {}", sig);
         }
 
-        match logs_unsubscribe_receiver.await {
-            Ok(logs_unsubscribe) => {
-                sleep(Duration::from_secs(5)).await;
-                logs_unsubscribe().await;
-            }
-            Err(e) => {
-                println!("logs_unsubscribe_receiver error: {}", e);
-            }
+        // Wait for input.
+        stdin.read_u8().await;
+
+        // Unsubscribe from everything, which will shutdown all the tasks.
+        while let Some((unsubscribe, name)) = unsubscribe_receiver.recv().await {
+            println!("unsubscribing from {}", name);
+            unsubscribe().await
         }
 
-        match root_unsubscribe_receiver.await {
-            Ok(root_unsubscribe) => {
-                sleep(Duration::from_secs(5)).await;
-                root_unsubscribe().await;
-            }
-            Err(e) => {
-                println!("root_unsubscribe_receiver error: {}", e);
+        // Wait for the tasks.
+        for (name, handle) in join_handles {
+            println!("waiting on task {}", name);
+            if let Ok(Err(e)) = handle.await {
+                println!("task {} failed: {}", name, e);
             }
         }
-
-        match block_unsubscribe_receiver.await {
-            Ok(block_unsubscribe) => {
-                sleep(Duration::from_secs(5)).await;
-                block_unsubscribe().await;
-            }
-            Err(e) => {
-                println!("block_unsubscribe_receiver error: {}", e);
-            }
-        }
-
-        match program_unsubscribe_receiver.await {
-            Ok(program_unsubscribe) => {
-                sleep(Duration::from_secs(5)).await;
-                program_unsubscribe().await;
-            }
-            Err(e) => {
-                println!("program_unsubscribe_receiver error: {}", e);
-            }
-        }
-
-        match account_unsubscribe_receiver.await {
-            Ok(account_unsubscribe) => {
-                sleep(Duration::from_secs(5)).await;
-                account_unsubscribe().await;
-            }
-            Err(e) => {
-                println!("account_unsubscribe_receiver error: {}", e);
-            }
-        }
-
-        match vote_unsubscribe_receiver.await {
-            Ok(vote_unsubscribe) => {
-                sleep(Duration::from_secs(5)).await;
-                vote_unsubscribe().await;
-            }
-            Err(e) => {
-                println!("vote_unsubscribe_receiver error: {}", e);
-            }
-        }
-
-        while let Some(signature_unsubscribe) = signature_unsubscribe_receiver.recv().await {
-            sleep(Duration::from_secs(1)).await;
-            signature_unsubscribe().await;
-        }
-
-        task_slot_subscribe.await;
-        task_slot_receiver.await;
-
-        task_slot_updates_subscribe.await;
-        task_slot_updates_receiver.await;
-
-        task_logs_subscribe.await;
-        task_logs_receiver.await;
-
-        task_root_subscribe.await;
-        task_root_receiver.await;
-
-        task_block_subscribe.await;
-        task_block_receiver.await;
-
-        task_program_subscribe.await;
-        task_program_receiver.await;
-
-        task_account_subscribe.await;
-        task_account_receiver.await;
-
-        task_vote_subscribe.await;
-        task_vote_receiver.await;
-
-        task_signature_subscribe.await;
-        task_signature_receiver.await;
-
-        task_test_tx.await;
     });
 
     Ok(())

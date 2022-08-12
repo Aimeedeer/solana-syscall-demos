@@ -16,6 +16,22 @@ It has three parts:
 There is a log file recording my tests with `localhost` and `devnet`:
 [log](log.md)
 
+
+## Interesting code examples
+
+- [components/program/sysvars.rs] -
+  Access all sysvars from a Solana program.
+- [components/client/src/secp256k1.rs] and [components/program/src/secp256k1.rs] -
+  Use the secp256k1 native program to verify signatures or recover pubkeys.
+- [components/client/src/pubsub_client_async.rs] -
+  Asynchronously subscribe to all WebSocket events then shutdown cleanly.
+
+This repo's structure is based on [`solana-template`],
+which itself may be useful to read.
+
+[`solana-template`]: https://github.com/Aimeedeer/solana-template
+
+
 ## How to use it
 
 Install Solana cli following the official doc: [Command-line
@@ -59,7 +75,7 @@ To list them run
 $ cargo run -- --help
 ```
 
-Printing sysvars via client calls
+Printing sysvars via client calls:
 
 ```
 $ cargo run -- print-sysvars-via-client
@@ -148,6 +164,35 @@ Transaction executed in slot 59595:
     Program <your_program_id> success
 ```
 
+Subscribing to async WebSocket events:
+
+```
+$ cargo run -p client -- demo-pubsub-client-async
+    Finished dev [unoptimized + debuginfo] target(s) in 0.16s
+     Running `target/debug/client demo-pubsub-client-async`                                                                            [2022-08-12T19:34:22Z INFO  client::util] connecting to solana node at http://localhost:8899
+[2022-08-12T19:34:22Z INFO  client::util] RPC version: 1.10.35
+[2022-08-12T19:34:22Z INFO  client] version: 1.10.35
+[2022-08-12T19:34:22Z INFO  client::util] loading program keypair from /home/brian/solana/solana-syscall-demos/components/client/../../
+target/deploy/program-keypair.json
+[2022-08-12T19:34:22Z INFO  client::util] program id: AYn3tq1XGucC9EtEnmAHgogPRCUJdB4arFRXszqxxubu
+[2022-08-12T19:34:22Z INFO  client::util] program account: Account { lamports: 1141440, data.len: 36, owner: BPFLoaderUpgradeab1e111111
+11111111111111111, executable: true, rent_epoch: 0, data: 020000001d5bad6341b9218f428735442bd0d02e572d69cdebc1a2dfc2d10aa300fb5495 }
+program id: AYn3tq1XGucC9EtEnmAHgogPRCUJdB4arFRXszqxxubu
+press any key to begin, then press another key to end
+
+sending test transactions
+------------------------------------------------------------
+slot_updates pubsub result: Completed { slot: 48929, timestamp: 1660332865232 }
+------------------------------------------------------------
+slot_updates pubsub result: Frozen { slot: 48929, timestamp: 1660332865241, stats: SlotTransactionStats { num_transaction_entries: 2, n
+um_successful_transactions: 2, num_failed_transactions: 0, max_transactions_per_entry: 1 } }
+------------------------------------------------------------
+program pubsub result: Response { context: RpcResponseContext { slot: 48897 }, value: RpcKeyedAccount { pubkey: "2vfptS8RowtawPzURDJ1u5
+2jEvx5T7uHRxhfj8VnFwdo", account: UiAccount { lamports: 499756150001, data: LegacyBinary(""), owner: "11111111111111111111111111111111"
+, executable: false, rent_epoch: 0 } } }
+------------------------------------------------------------
+slot_updates pubsub result: Root { slot: 48897, timestamp: 1660332865246 }
+```
 
 
 

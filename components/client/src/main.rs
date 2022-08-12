@@ -81,7 +81,7 @@ fn main() -> Result<()> {
         }
         Command::DemoPubsubClientAsync => {
             pubsub_client_async::demo_pubsub_client_async(
-                config.keypair,
+                &config,
                 client,
                 &program_keypair,
             )?;

@@ -28,7 +28,7 @@ use crate::util::Config;
 /// Demo all async `PubsubClient` subscriptions.
 ///
 /// This creates a tokio runtime,
-/// spawn a task for every subscription type,
+/// spawns a task for every subscription type,
 /// which subscribes and sends back a ready message and an unsubscribe channel (closure),
 /// then loops on printing messages.
 /// The main task then waits for user input before unsubscribing and waiting on the tasks.

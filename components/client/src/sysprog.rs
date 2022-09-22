@@ -7,9 +7,9 @@ use solana_sdk::{
 use common::DemoSystemProgramInstruction;
 
 pub fn demo_system_program_rpc(
-    config: &crate::util::Config,
-    client: &RpcClient,
-    program_keypair: &Keypair,
+    _config: &crate::util::Config,
+    _client: &RpcClient,
+    _program_keypair: &Keypair,
 ) -> Result<()> {
     todo!()
 }

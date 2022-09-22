@@ -13,11 +13,11 @@ mod ed25519_defs {
     use solana_program::program_error::ProgramError;
 
     pub const PUBKEY_SERIALIZED_SIZE: usize = 32;
-    pub const SIGNATURE_SERIALIZED_SIZE: usize = 64;
-    pub const SIGNATURE_OFFSETS_SERIALIZED_SIZE: usize = 14;
+    //pub const SIGNATURE_SERIALIZED_SIZE: usize = 64;
+    //pub const SIGNATURE_OFFSETS_SERIALIZED_SIZE: usize = 14;
     // bytemuck requires structures to be aligned
-    pub const SIGNATURE_OFFSETS_START: usize = 2;
-    pub const DATA_START: usize = SIGNATURE_OFFSETS_SERIALIZED_SIZE + SIGNATURE_OFFSETS_START;
+    //pub const SIGNATURE_OFFSETS_START: usize = 2;
+    //pub const DATA_START: usize = SIGNATURE_OFFSETS_SERIALIZED_SIZE + SIGNATURE_OFFSETS_START;
 
     #[derive(Default, Debug, Copy, Clone)]
     pub struct Ed25519SignatureOffsets {
@@ -33,11 +33,6 @@ mod ed25519_defs {
     pub fn load_signature_offsets(
         ed25519_instr_data: &[u8],
     ) -> Result<Ed25519SignatureOffsets, ProgramError> {
-        // First element is the number of num_signatures
-        let num_signature = *ed25519_instr_data
-            .get(0)
-            .ok_or(ProgramError::InvalidArgument)?;
-
         let instr_data_slice = ed25519_instr_data
             .get(2..)
             .ok_or(ProgramError::InvalidArgument)?;
@@ -90,11 +85,6 @@ pub fn demo_ed25519(
 
     let num_signatures = ed25519_instr.data[0];
     assert_eq!(1, num_signatures);
-
-    let start = usize::from(num_signatures)
-        .saturating_mul(SIGNATURE_OFFSETS_SERIALIZED_SIZE)
-        .saturating_add(SIGNATURE_OFFSETS_START);
-    let end = start.saturating_add(SIGNATURE_OFFSETS_SERIALIZED_SIZE);
 
     let offsets = ed25519_defs::load_signature_offsets(&ed25519_instr.data)?;
     msg!("offsets: {:#?}", offsets);

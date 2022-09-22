@@ -8,6 +8,7 @@ mod invoke;
 mod pubsub_client;
 mod pubsub_client_async;
 mod secp256k1;
+mod sysprog;
 mod sysvars;
 mod util;
 
@@ -30,6 +31,8 @@ enum Command {
     DemoInvoke,
     DemoPubsubClient,
     DemoPubsubClientAsync,
+    DemoSystemProgramRpc,
+    DemoSystemProgramCpi,
 }
 
 fn _main() -> Result<()> {
@@ -83,6 +86,16 @@ fn main() -> Result<()> {
             pubsub_client_async::demo_pubsub_client_async(
                 &config,
                 client,
+            )?;
+        }
+        Command::DemoSystemProgramRpc => {
+            sysprog::demo_system_program_rpc(
+                &config, &client, &program_keypair
+            )?;
+        }
+        Command::DemoSystemProgramCpi => {
+            sysprog::demo_system_program_cpi(
+                &config, &client, &program_keypair
             )?;
         }
     }

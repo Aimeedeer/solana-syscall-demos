@@ -7,6 +7,7 @@ use solana_program::{
 mod ed25519;
 mod invoke;
 mod secp256k1;
+mod sysprog;
 mod sysvars;
 
 entrypoint!(process_instruction);
@@ -39,6 +40,9 @@ fn process_instruction(
         }
         CustomInstruction::DemoInvoke(instr) => {
             invoke::demo_invoke(program_id, instr, accounts)?;
+        }
+        CustomInstruction::DemoSystemProgram(instr) => {
+            sysprog::demo_system_program(program_id, instr, accounts)?;
         }
     }
 

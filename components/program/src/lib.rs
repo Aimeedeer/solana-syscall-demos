@@ -44,6 +44,9 @@ fn process_instruction(
         CustomInstruction::DemoSystemProgramCreateAccount(instr) => {
             sysprog::demo_system_program_create_account(program_id, instr, accounts)?;
         }
+        CustomInstruction::DemoSystemProgramTransferAllocAssign(instr) => {
+            sysprog::demo_system_program_transfer_alloc_assign(program_id, instr, accounts)?;
+        }
     }
 
     Ok(())

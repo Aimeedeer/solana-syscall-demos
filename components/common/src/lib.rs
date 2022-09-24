@@ -14,6 +14,7 @@ pub enum CustomInstruction {
     DemoEd25519(DemoEd25519Instruction),
     DemoInvoke(DemoInvokeInstruction),
     DemoSystemProgramCreateAccount(DemoSystemProgramCreateAccountInstruction),
+    DemoSystemProgramTransferAllocAssign(DemoSystemProgramTransferAllocAssignInstruction),
 }
 
 /// # Accounts
@@ -167,6 +168,34 @@ impl DemoSystemProgramCreateAccountInstruction {
             AccountMeta::new(self.new_account, true),
         ];
         let instr = CustomInstruction::DemoSystemProgramCreateAccount(self);
+
+        Instruction::new_with_borsh(*program_id, &instr, accounts)
+    }
+}
+
+/// # Accounts
+///
+/// - 0: system program - executable
+/// - 1: payer - signer, writable
+/// - 2: new account - signer, writable
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+pub struct DemoSystemProgramTransferAllocAssignInstruction {
+    // This is serialized redundantly with the account meta,
+    // just to avoid adding another param to build_instruction.
+    pub payer: Pubkey,
+    // This is serialized redundantly with the account meta,
+    // just to avoid adding another param to build_instruction.
+    pub new_account: Pubkey,
+}
+
+impl DemoSystemProgramTransferAllocAssignInstruction {
+    pub fn build_instruction(self, program_id: &Pubkey) -> Instruction {
+        let accounts = vec![
+            AccountMeta::new_readonly(system_program::ID, false),
+            AccountMeta::new(self.payer, true),
+            AccountMeta::new(self.new_account, true),
+        ];
+        let instr = CustomInstruction::DemoSystemProgramTransferAllocAssign(self);
 
         Instruction::new_with_borsh(*program_id, &instr, accounts)
     }

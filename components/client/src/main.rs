@@ -32,6 +32,7 @@ enum Command {
     DemoPubsubClient,
     DemoPubsubClientAsync,
     DemoSystemProgramCreateAccountCpi,
+    DemoSystemProgramTransferAllocAssignCpi,
 }
 
 fn _main() -> Result<()> {
@@ -89,6 +90,11 @@ fn main() -> Result<()> {
         }
         Command::DemoSystemProgramCreateAccountCpi => {
             sysprog::demo_system_program_create_account_cpi(
+                &config, &client, &program_keypair
+            )?;
+        }
+        Command::DemoSystemProgramTransferAllocAssignCpi => {
+            sysprog::demo_system_program_transfer_alloc_assign_cpi(
                 &config, &client, &program_keypair
             )?;
         }

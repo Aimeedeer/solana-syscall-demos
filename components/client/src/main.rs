@@ -31,8 +31,7 @@ enum Command {
     DemoInvoke,
     DemoPubsubClient,
     DemoPubsubClientAsync,
-    DemoSystemProgramRpc,
-    DemoSystemProgramCpi,
+    DemoSystemProgramCreateAccountCpi,
 }
 
 fn _main() -> Result<()> {
@@ -88,13 +87,8 @@ fn main() -> Result<()> {
                 client,
             )?;
         }
-        Command::DemoSystemProgramRpc => {
-            sysprog::demo_system_program_rpc(
-                &config, &client, &program_keypair
-            )?;
-        }
-        Command::DemoSystemProgramCpi => {
-            sysprog::demo_system_program_cpi(
+        Command::DemoSystemProgramCreateAccountCpi => {
+            sysprog::demo_system_program_create_account_cpi(
                 &config, &client, &program_keypair
             )?;
         }

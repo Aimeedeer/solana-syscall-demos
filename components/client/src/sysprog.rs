@@ -4,24 +4,16 @@ use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
-use common::DemoSystemProgramInstruction;
+use common::DemoSystemProgramCreateAccountInstruction;
 
-pub fn demo_system_program_rpc(
-    _config: &crate::util::Config,
-    _client: &RpcClient,
-    _program_keypair: &Keypair,
-) -> Result<()> {
-    todo!()
-}
-
-pub fn demo_system_program_cpi(
+pub fn demo_system_program_create_account_cpi(
     config: &crate::util::Config,
     client: &RpcClient,
     program_keypair: &Keypair,
 ) -> Result<()> {
     let new_account = Keypair::new();
 
-    let instr = DemoSystemProgramInstruction {
+    let instr = DemoSystemProgramCreateAccountInstruction {
         payer: config.keypair.pubkey(),
         new_account: new_account.pubkey(),
     }.build_instruction(&program_keypair.pubkey());

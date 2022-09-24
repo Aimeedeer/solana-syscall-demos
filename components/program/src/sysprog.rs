@@ -1,4 +1,4 @@
-use common::DemoSystemProgramInstruction;
+use common::DemoSystemProgramCreateAccountInstruction;
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey,
     account_info::next_account_info,
@@ -10,9 +10,9 @@ use solana_program::{
     sysvar::Sysvar,
 };
 
-pub fn demo_system_program(
+pub fn demo_system_program_create_account(
     _program_id: &Pubkey,
-    _instruction: DemoSystemProgramInstruction,
+    _instruction: DemoSystemProgramCreateAccountInstruction,
     accounts: &[AccountInfo],
 ) -> ProgramResult {
     msg!("demo secp256k1 verify basic");

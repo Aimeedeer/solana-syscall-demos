@@ -13,7 +13,7 @@ pub enum CustomInstruction {
     DemoSecp256k1Recover(DemoSecp256k1RecoverInstruction),
     DemoEd25519(DemoEd25519Instruction),
     DemoInvoke(DemoInvokeInstruction),
-    DemoSystemProgram(DemoSystemProgramInstruction),
+    DemoSystemProgramCreateAccount(DemoSystemProgramCreateAccountInstruction),
 }
 
 /// # Accounts
@@ -150,7 +150,7 @@ impl DemoInvokeInstruction {
 /// - 1: payer - signer, writable
 /// - 2: new account - signer, writable
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
-pub struct DemoSystemProgramInstruction {
+pub struct DemoSystemProgramCreateAccountInstruction {
     // This is serialized redundantly with the account meta,
     // just to avoid adding another param to build_instruction.
     pub payer: Pubkey,
@@ -159,14 +159,14 @@ pub struct DemoSystemProgramInstruction {
     pub new_account: Pubkey,
 }
 
-impl DemoSystemProgramInstruction {
+impl DemoSystemProgramCreateAccountInstruction {
     pub fn build_instruction(self, program_id: &Pubkey) -> Instruction {
         let accounts = vec![
             AccountMeta::new_readonly(system_program::ID, false),
             AccountMeta::new(self.payer, true),
             AccountMeta::new(self.new_account, true),
         ];
-        let instr = CustomInstruction::DemoSystemProgram(self);
+        let instr = CustomInstruction::DemoSystemProgramCreateAccount(self);
 
         Instruction::new_with_borsh(*program_id, &instr, accounts)
     }

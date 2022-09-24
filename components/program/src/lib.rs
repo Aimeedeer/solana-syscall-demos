@@ -41,8 +41,8 @@ fn process_instruction(
         CustomInstruction::DemoInvoke(instr) => {
             invoke::demo_invoke(program_id, instr, accounts)?;
         }
-        CustomInstruction::DemoSystemProgram(instr) => {
-            sysprog::demo_system_program(program_id, instr, accounts)?;
+        CustomInstruction::DemoSystemProgramCreateAccount(instr) => {
+            sysprog::demo_system_program_create_account(program_id, instr, accounts)?;
         }
     }
 

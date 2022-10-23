@@ -157,7 +157,13 @@ pub struct DemoSystemProgramCreateAccountInstruction {
     pub payer: Pubkey,
     // This is serialized redundantly with the account meta,
     // just to avoid adding another param to build_instruction.
-    pub new_account: Pubkey,
+    pub new_account_pda: Pubkey,
+    /// Random numbers.
+    ///
+    /// The choice of seed is application-dependent.
+    pub new_account_seed: [u8; 16],
+    /// Bump key for the new account.
+    pub new_account_bumpkey: u8,
 }
 
 impl DemoSystemProgramCreateAccountInstruction {
@@ -165,7 +171,7 @@ impl DemoSystemProgramCreateAccountInstruction {
         let accounts = vec![
             AccountMeta::new_readonly(system_program::ID, false),
             AccountMeta::new(self.payer, true),
-            AccountMeta::new(self.new_account, true),
+            AccountMeta::new(self.new_account_pda, false),
         ];
         let instr = CustomInstruction::DemoSystemProgramCreateAccount(self);
 
@@ -185,7 +191,13 @@ pub struct DemoSystemProgramTransferAllocAssignInstruction {
     pub payer: Pubkey,
     // This is serialized redundantly with the account meta,
     // just to avoid adding another param to build_instruction.
-    pub new_account: Pubkey,
+    pub new_account_pda: Pubkey,
+    /// Random numbers.
+    ///
+    /// The choice of seed is application-dependent.
+    pub new_account_seed: [u8; 16],
+    /// Bump key for the new account.
+    pub new_account_bumpkey: u8,
 }
 
 impl DemoSystemProgramTransferAllocAssignInstruction {
@@ -193,7 +205,7 @@ impl DemoSystemProgramTransferAllocAssignInstruction {
         let accounts = vec![
             AccountMeta::new_readonly(system_program::ID, false),
             AccountMeta::new(self.payer, true),
-            AccountMeta::new(self.new_account, true),
+            AccountMeta::new(self.new_account_pda, false),
         ];
         let instr = CustomInstruction::DemoSystemProgramTransferAllocAssign(self);
 

@@ -9,13 +9,13 @@ use solana_program::{
     system_program,
     system_instruction,
     sysvar::rent::Rent,
-    program::invoke,
+    program::invoke_signed,
     sysvar::Sysvar,
 };
 
 pub fn demo_system_program_create_account(
     program_id: &Pubkey,
-    _instruction: DemoSystemProgramCreateAccountInstruction,
+    instruction: DemoSystemProgramCreateAccountInstruction,
     accounts: &[AccountInfo],
 ) -> ProgramResult {
     msg!("demo secp256k1 verify basic");
@@ -31,9 +31,11 @@ pub fn demo_system_program_create_account(
     assert!(payer.is_signer);
     assert!(payer.is_writable);
 
-    let new_account = next_account_info(account_info_iter)?;
-    assert!(new_account.is_signer);
-    assert!(new_account.is_writable);
+    let new_account_pda = next_account_info(account_info_iter)?;
+    assert!(new_account_pda.is_writable);
+
+    let new_account_seed = &instruction.new_account_seed;
+    let new_account_bumpkey = instruction.new_account_bumpkey;
 
     let space = 1;
     let rent = Rent::get()?;
@@ -41,18 +43,19 @@ pub fn demo_system_program_create_account(
 
     let instr = system_instruction::create_account(
         payer.key,
-        new_account.key,
+        new_account_pda.key,
         lamports,
         space as u64,
         program_id,
     );
 
-    invoke(
+    invoke_signed(
         &instr,
-        &[payer.clone(), new_account.clone()],
+        &[payer.clone(), new_account_pda.clone()],
+        &[&[payer.key.as_ref(), new_account_seed, &[new_account_bumpkey]]],
     )?;
 
-    msg!("new account: {}", new_account.key);
+    msg!("new account: {}", new_account_pda.key);
     msg!("lamports: {}", lamports);
 
     Ok(())
@@ -60,7 +63,7 @@ pub fn demo_system_program_create_account(
 
 pub fn demo_system_program_transfer_alloc_assign(
     program_id: &Pubkey,
-    _instruction: DemoSystemProgramTransferAllocAssignInstruction,
+    instruction: DemoSystemProgramTransferAllocAssignInstruction,
     accounts: &[AccountInfo],
 ) -> ProgramResult {
     msg!("demo secp256k1 verify basic");
@@ -76,9 +79,11 @@ pub fn demo_system_program_transfer_alloc_assign(
     assert!(payer.is_signer);
     assert!(payer.is_writable);
 
-    let new_account = next_account_info(account_info_iter)?;
-    assert!(new_account.is_signer);
-    assert!(new_account.is_writable);
+    let new_account_pda = next_account_info(account_info_iter)?;
+    assert!(new_account_pda.is_writable);
+
+    let new_account_seed = &instruction.new_account_seed;
+    let new_account_bumpkey = instruction.new_account_bumpkey;
 
     let space = 1;
     let rent = Rent::get()?;
@@ -86,36 +91,39 @@ pub fn demo_system_program_transfer_alloc_assign(
 
     let transfer_instr = system_instruction::transfer(
         payer.key,
-        new_account.key,
+        new_account_pda.key,
         lamports,
     );
 
     let alloc_instr = system_instruction::allocate(
-        new_account.key,
+        new_account_pda.key,
         space as u64,
     );
 
     let assign_instr = system_instruction::assign(
-        new_account.key,
+        new_account_pda.key,
         program_id,
     );
 
-    invoke(
+    invoke_signed(
         &transfer_instr,
-        &[payer.clone(), new_account.clone()],
+        &[payer.clone(), new_account_pda.clone()],
+        &[&[payer.key.as_ref(), new_account_seed, &[new_account_bumpkey]]],
     )?;
 
-    invoke(
+    invoke_signed(
         &alloc_instr,
-        &[new_account.clone()],
+        &[new_account_pda.clone()],
+        &[&[payer.key.as_ref(), new_account_seed, &[new_account_bumpkey]]],
     )?;
 
-    invoke(
+    invoke_signed(
         &assign_instr,
-        &[new_account.clone()],
+        &[new_account_pda.clone()],
+        &[&[payer.key.as_ref(), new_account_seed, &[new_account_bumpkey]]],
     )?;
 
-    msg!("new account: {}", new_account.key);
+    msg!("new account: {}", new_account_pda.key);
     msg!("lamports: {}", lamports);
 
     Ok(())

@@ -115,10 +115,7 @@ pub fn demo_ed25519(
     msg!("ed25519_instr_message: {:?}", ed25519_instr_message);
     msg!("expected_message: {:?}", expected_message);
 
-    assert_eq!(
-        ed25519_instr_message,
-        expected_message,
-    );
-    
+    assert_eq!(ed25519_instr_message, expected_message,);
+
     Ok(())
 }

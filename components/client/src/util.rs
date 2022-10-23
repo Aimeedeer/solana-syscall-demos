@@ -20,7 +20,8 @@ pub fn load_config(rpc_url: Option<String>) -> Result<Config> {
         .as_ref()
         .ok_or_else(|| anyhow!("config file path"))?;
     let cli_config = solana_cli_config::Config::load(config_file)?;
-    let json_rpc_url = rpc_url.clone()
+    let json_rpc_url = rpc_url
+        .clone()
         .map(|url| solana_clap_utils::input_validators::normalize_to_url_if_moniker(url))
         .unwrap_or(cli_config.json_rpc_url.clone());
     let websocket_url = rpc_url

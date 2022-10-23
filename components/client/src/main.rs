@@ -83,19 +83,16 @@ fn main() -> Result<()> {
             pubsub_client::demo_pubsub_client(&config, &client, &program_keypair)?;
         }
         Command::DemoPubsubClientAsync => {
-            pubsub_client_async::demo_pubsub_client_async(
-                &config,
-                client,
-            )?;
+            pubsub_client_async::demo_pubsub_client_async(&config, client)?;
         }
         Command::DemoSystemProgramCreateAccountCpi => {
-            sysprog::demo_system_program_create_account_cpi(
-                &config, &client, &program_keypair
-            )?;
+            sysprog::demo_system_program_create_account_cpi(&config, &client, &program_keypair)?;
         }
         Command::DemoSystemProgramTransferAllocAssignCpi => {
             sysprog::demo_system_program_transfer_alloc_assign_cpi(
-                &config, &client, &program_keypair
+                &config,
+                &client,
+                &program_keypair,
             )?;
         }
     }

@@ -1,15 +1,14 @@
 use anyhow::Result;
-use solana_client::rpc_client::RpcClient;
-use solana_sdk::{
-    signature::{Keypair, Signer},
-    transaction::Transaction,
-    pubkey::Pubkey,
-};
 use common::{
-    DemoSystemProgramCreateAccountInstruction,
-    DemoSystemProgramTransferAllocAssignInstruction,
+    DemoSystemProgramCreateAccountInstruction, DemoSystemProgramTransferAllocAssignInstruction,
 };
 use rand::Rng;
+use solana_client::rpc_client::RpcClient;
+use solana_sdk::{
+    pubkey::Pubkey,
+    signature::{Keypair, Signer},
+    transaction::Transaction,
+};
 
 pub fn demo_system_program_create_account_cpi(
     config: &crate::util::Config,
@@ -18,10 +17,7 @@ pub fn demo_system_program_create_account_cpi(
 ) -> Result<()> {
     let new_account_seed: [u8; 16] = rand::thread_rng().gen();
     let (new_account_pda, new_account_bumpkey) = Pubkey::find_program_address(
-        &[
-            config.keypair.pubkey().as_ref(),
-            &new_account_seed,
-        ],
+        &[config.keypair.pubkey().as_ref(), &new_account_seed],
         &program_keypair.pubkey(),
     );
 
@@ -30,7 +26,8 @@ pub fn demo_system_program_create_account_cpi(
         new_account_pda,
         new_account_seed,
         new_account_bumpkey,
-    }.build_instruction(&program_keypair.pubkey());
+    }
+    .build_instruction(&program_keypair.pubkey());
 
     let blockhash = client.get_latest_blockhash()?;
 
@@ -56,10 +53,7 @@ pub fn demo_system_program_transfer_alloc_assign_cpi(
 ) -> Result<()> {
     let new_account_seed: [u8; 16] = rand::thread_rng().gen();
     let (new_account_pda, new_account_bumpkey) = Pubkey::find_program_address(
-        &[
-            config.keypair.pubkey().as_ref(),
-            &new_account_seed,
-        ],
+        &[config.keypair.pubkey().as_ref(), &new_account_seed],
         &program_keypair.pubkey(),
     );
 
@@ -68,7 +62,8 @@ pub fn demo_system_program_transfer_alloc_assign_cpi(
         new_account_pda,
         new_account_seed,
         new_account_bumpkey,
-    }.build_instruction(&program_keypair.pubkey());
+    }
+    .build_instruction(&program_keypair.pubkey());
 
     let blockhash = client.get_latest_blockhash()?;
 

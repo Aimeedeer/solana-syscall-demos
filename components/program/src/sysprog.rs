@@ -1,15 +1,9 @@
 use common::{
-    DemoSystemProgramCreateAccountInstruction,
-    DemoSystemProgramTransferAllocAssignInstruction,
+    DemoSystemProgramCreateAccountInstruction, DemoSystemProgramTransferAllocAssignInstruction,
 };
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey,
-    account_info::next_account_info,
-    msg,
-    system_program,
-    system_instruction,
-    sysvar::rent::Rent,
-    program::invoke_signed,
+    account_info::next_account_info, account_info::AccountInfo, entrypoint::ProgramResult, msg,
+    program::invoke_signed, pubkey::Pubkey, system_instruction, system_program, sysvar::rent::Rent,
     sysvar::Sysvar,
 };
 
@@ -23,9 +17,7 @@ pub fn demo_system_program_create_account(
     let account_info_iter = &mut accounts.iter();
 
     let system_program_account = next_account_info(account_info_iter)?;
-    assert!(system_program::check_id(
-        system_program_account.key
-    ));
+    assert!(system_program::check_id(system_program_account.key));
 
     let payer = next_account_info(account_info_iter)?;
     assert!(payer.is_signer);
@@ -71,9 +63,7 @@ pub fn demo_system_program_transfer_alloc_assign(
     let account_info_iter = &mut accounts.iter();
 
     let system_program_account = next_account_info(account_info_iter)?;
-    assert!(system_program::check_id(
-        system_program_account.key
-    ));
+    assert!(system_program::check_id(system_program_account.key));
 
     let payer = next_account_info(account_info_iter)?;
     assert!(payer.is_signer);
@@ -89,21 +79,11 @@ pub fn demo_system_program_transfer_alloc_assign(
     let rent = Rent::get()?;
     let lamports = rent.minimum_balance(space);
 
-    let transfer_instr = system_instruction::transfer(
-        payer.key,
-        new_account_pda.key,
-        lamports,
-    );
+    let transfer_instr = system_instruction::transfer(payer.key, new_account_pda.key, lamports);
 
-    let alloc_instr = system_instruction::allocate(
-        new_account_pda.key,
-        space as u64,
-    );
+    let alloc_instr = system_instruction::allocate(new_account_pda.key, space as u64);
 
-    let assign_instr = system_instruction::assign(
-        new_account_pda.key,
-        program_id,
-    );
+    let assign_instr = system_instruction::assign(new_account_pda.key, program_id);
 
     invoke_signed(
         &transfer_instr,

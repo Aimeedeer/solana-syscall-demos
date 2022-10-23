@@ -24,6 +24,7 @@ pub fn demo_system_program_create_account(
     assert!(payer.is_writable);
 
     let new_account_pda = next_account_info(account_info_iter)?;
+    assert!(!new_account_pda.is_signer);
     assert!(new_account_pda.is_writable);
 
     let new_account_seed = &instruction.new_account_seed;
@@ -70,6 +71,7 @@ pub fn demo_system_program_transfer_alloc_assign(
     assert!(payer.is_writable);
 
     let new_account_pda = next_account_info(account_info_iter)?;
+    assert!(!new_account_pda.is_signer);
     assert!(new_account_pda.is_writable);
 
     let new_account_seed = &instruction.new_account_seed;

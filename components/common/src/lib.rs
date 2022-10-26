@@ -162,8 +162,8 @@ pub struct DemoSystemProgramCreateAccountInstruction {
     ///
     /// The choice of seed is application-dependent.
     pub new_account_seed: [u8; 16],
-    /// Bump key for the new account.
-    pub new_account_bumpkey: u8,
+    /// Bump seed for the new account.
+    pub new_account_bump_seed: u8,
 }
 
 impl DemoSystemProgramCreateAccountInstruction {
@@ -196,8 +196,8 @@ pub struct DemoSystemProgramTransferAllocAssignInstruction {
     ///
     /// The choice of seed is application-dependent.
     pub new_account_seed: [u8; 16],
-    /// Bump key for the new account.
-    pub new_account_bumpkey: u8,
+    /// Bump seed for the new account.
+    pub new_account_bump_seed: u8,
 }
 
 impl DemoSystemProgramTransferAllocAssignInstruction {

@@ -16,7 +16,7 @@ pub fn demo_system_program_create_account_cpi(
     program_keypair: &Keypair,
 ) -> Result<()> {
     let new_account_seed: [u8; 16] = rand::thread_rng().gen();
-    let (new_account_pda, new_account_bumpkey) = Pubkey::find_program_address(
+    let (new_account_pda, new_account_bump_seed) = Pubkey::find_program_address(
         &[config.keypair.pubkey().as_ref(), &new_account_seed],
         &program_keypair.pubkey(),
     );
@@ -25,7 +25,7 @@ pub fn demo_system_program_create_account_cpi(
         payer: config.keypair.pubkey(),
         new_account_pda,
         new_account_seed,
-        new_account_bumpkey,
+        new_account_bump_seed,
     }
     .build_instruction(&program_keypair.pubkey());
 
@@ -52,7 +52,7 @@ pub fn demo_system_program_transfer_alloc_assign_cpi(
     program_keypair: &Keypair,
 ) -> Result<()> {
     let new_account_seed: [u8; 16] = rand::thread_rng().gen();
-    let (new_account_pda, new_account_bumpkey) = Pubkey::find_program_address(
+    let (new_account_pda, new_account_bump_seed) = Pubkey::find_program_address(
         &[config.keypair.pubkey().as_ref(), &new_account_seed],
         &program_keypair.pubkey(),
     );
@@ -61,7 +61,7 @@ pub fn demo_system_program_transfer_alloc_assign_cpi(
         payer: config.keypair.pubkey(),
         new_account_pda,
         new_account_seed,
-        new_account_bumpkey,
+        new_account_bump_seed,
     }
     .build_instruction(&program_keypair.pubkey());
 

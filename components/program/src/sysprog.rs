@@ -28,7 +28,7 @@ pub fn demo_system_program_create_account(
     assert!(new_account_pda.is_writable);
 
     let new_account_seed = &instruction.new_account_seed;
-    let new_account_bumpkey = instruction.new_account_bumpkey;
+    let new_account_bump_seed = instruction.new_account_bump_seed;
 
     let space = 1;
     let rent = Rent::get()?;
@@ -45,7 +45,7 @@ pub fn demo_system_program_create_account(
     invoke_signed(
         &instr,
         &[payer.clone(), new_account_pda.clone()],
-        &[&[payer.key.as_ref(), new_account_seed, &[new_account_bumpkey]]],
+        &[&[payer.key.as_ref(), new_account_seed, &[new_account_bump_seed]]],
     )?;
 
     msg!("new account: {}", new_account_pda.key);
@@ -75,7 +75,7 @@ pub fn demo_system_program_transfer_alloc_assign(
     assert!(new_account_pda.is_writable);
 
     let new_account_seed = &instruction.new_account_seed;
-    let new_account_bumpkey = instruction.new_account_bumpkey;
+    let new_account_bump_seed = instruction.new_account_bump_seed;
 
     let space = 1;
     let rent = Rent::get()?;
@@ -90,19 +90,19 @@ pub fn demo_system_program_transfer_alloc_assign(
     invoke_signed(
         &transfer_instr,
         &[payer.clone(), new_account_pda.clone()],
-        &[&[payer.key.as_ref(), new_account_seed, &[new_account_bumpkey]]],
+        &[&[payer.key.as_ref(), new_account_seed, &[new_account_bump_seed]]],
     )?;
 
     invoke_signed(
         &alloc_instr,
         &[new_account_pda.clone()],
-        &[&[payer.key.as_ref(), new_account_seed, &[new_account_bumpkey]]],
+        &[&[payer.key.as_ref(), new_account_seed, &[new_account_bump_seed]]],
     )?;
 
     invoke_signed(
         &assign_instr,
         &[new_account_pda.clone()],
-        &[&[payer.key.as_ref(), new_account_seed, &[new_account_bumpkey]]],
+        &[&[payer.key.as_ref(), new_account_seed, &[new_account_bump_seed]]],
     )?;
 
     msg!("new account: {}", new_account_pda.key);
